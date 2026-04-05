@@ -1,30 +1,161 @@
 # GameGenie‑X Encoding Scheme
 
-GameGenie‑X uses a compact 75‑bit encoding format inspired by the original Game Genie, adapted for modern save‑file and configuration patching.
+The GameGenie‑X encoding system transforms short, human‑friendly codes into structured patch instructions. This design mirrors the spirit of the original Game Genie while adapting it for modern save‑file and configuration patching.
+
+GameGenie‑X codes are compact, deterministic, and fully self‑contained.
+
+---
 
 ## Code Structure
 
-A standard code is 15 characters, grouped for readability:
+A standard GameGenie‑X code is **15 characters**, grouped for readability:
 
+```
 XXXXX-XXXXX-XXXXX
+```
 
+Each character encodes **5 bits** using the GameGenie‑X alphabet.
 
-Each character encodes 5 bits using the GameGenie‑X alphabet.
+Total size:  
+**15 characters × 5 bits = 75 bits**
 
-Total: **15 chars × 5 bits = 75 bits**
+These 75 bits are mapped into a structured patch format.
+
+---
 
 ## Bit Layout
 
+The 75‑bit payload is divided into the following fields:
+
 | Bits | Field | Description |
 |------|--------|-------------|
-| 4    | Target Type | save, config, memory |
+| 4    | Target Type | save, config, or memory |
 | 20   | Offset / Key Path Hash | location to patch |
 | 16   | New Value | value to write |
 | 16   | Compare Value | optional; 0xFFFF = unused |
 | 15   | Checksum | validation and tamper detection |
 
-## Philosophy
+### Why this layout?
 
-Short code → deterministic patch → fun, safe gameplay changes.
+- Compact enough to feel retro  
+- Large enough to encode meaningful patches  
+- Mirrors the original Game Genie’s “address + value + optional compare” pattern  
+- Adds modern safety via checksum and structured target types  
 
-This mirrors the original Game Genie’s spirit while remaining fully modern and ethical.
+---
+
+## Encoding Process
+
+The encoding process converts a structured patch into a 75‑bit binary payload, then maps that payload into the 32‑symbol GameGenie‑X alphabet.
+
+### Steps
+
+1. **Start with a Patch Object**  
+   (target, offset, value, compare)
+
+2. **Pack fields into a 75‑bit buffer**  
+   - bit‑pack each field according to the layout  
+   - compute checksum  
+   - append checksum bits
+
+3. **Split into 5‑bit chunks**  
+   75 bits → 15 chunks
+
+4. **Map each chunk to a symbol**  
+   using the GameGenie‑X alphabet
+
+5. **Format into groups**  
+   `XXXXX-XXXXX-XXXXX`
+
+This produces a shareable, deterministic GameGenie‑X code.
+
+---
+
+## Decoding Process
+
+Decoding reverses the encoding steps:
+
+1. **Strip formatting**  
+2. **Convert each symbol → 5‑bit value**  
+3. **Reassemble the 75‑bit payload**  
+4. **Extract fields**  
+5. **Validate checksum**  
+6. **Construct Patch Object**
+
+If the checksum fails, the code is rejected.
+
+---
+
+## Target Types
+
+Target types are encoded in the first 4 bits:
+
+| Value | Target |
+|--------|---------|
+| 0x0 | Save file |
+| 0x1 | Config file |
+| 0x2 | Memory snapshot |
+| 0xF | Reserved |
+
+This allows future expansion without breaking compatibility.
+
+---
+
+## Compare Value
+
+The compare value is optional.
+
+- If `compare == 0xFFFF`:  
+  → No comparison required; patch always applies.
+
+- Otherwise:  
+  → Patch applies only if the current value matches.
+
+This mirrors the original Game Genie’s optional compare byte and adds safety for modern patching.
+
+---
+
+## Checksum
+
+The final 15 bits store a checksum used to:
+
+- detect corrupted codes  
+- prevent accidental modifications  
+- ensure deterministic decoding  
+
+Checksum algorithm is defined in the core engine and may evolve as the project matures.
+
+---
+
+## Example Encoding
+
+**Patch Object:**
+
+```json
+{
+  "target": "save",
+  "offset": 67852,
+  "compare": 5,
+  "value": 999
+}
+```
+
+**Encodes to:**
+
+```
+F2X9W-7K3PZ-9A4TM
+```
+
+(This example is conceptual.)
+
+---
+
+## Design Philosophy
+
+- Short codes  
+- Deterministic behavior  
+- Retro aesthetic  
+- Modern safety  
+- MIT‑licensed openness  
+
+The encoding scheme is the heart of GameGenie‑X — compact, expressive, and fun.
