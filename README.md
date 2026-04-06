@@ -131,3 +131,8 @@ This project is licensed under the **MIT License**, honoring the spirit of the o
 ## **Status**
 Early prototype.  
 Encoding engine + patch engine under active development.
+
+---
+
+## **Acknowledgements**
+Built with coding support from Google Jules, architectural guidance from Microsoft Copilot, and minor code‑review assistance from ChatGPT Codex.
