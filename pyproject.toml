@@ -32,6 +32,7 @@ include = [
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-v --tb=short"
+pythonpath = ["src"]
 
 [tool.mypy]
 python_version = "3.11"
