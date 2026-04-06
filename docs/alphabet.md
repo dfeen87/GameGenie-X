@@ -1,6 +1,6 @@
 # GameGenie‑X Code Alphabet
 
-The GameGenie‑X alphabet is a custom 32‑symbol character set used to encode the 75‑bit payload of every GameGenie‑X code.  
+The GameGenie‑X alphabet is a custom 32‑symbol character set used to encode the [75‑bit payload](encoding.md) of every GameGenie‑X code.
 It is designed for clarity, compactness, and a retro‑inspired aesthetic that echoes the original Game Genie while remaining fully modern.
 
 ---
@@ -50,7 +50,7 @@ Using 32 symbols gives each character a 5‑bit capacity:
 - 2⁵ = 32  
 - 15 characters × 5 bits = **75 bits**
 
-This aligns perfectly with the GameGenie‑X encoding scheme:
+This aligns perfectly with the GameGenie‑X [encoding scheme](encoding.md):
 
 - 4 bits — target type  
 - 20 bits — offset / key‑path hash  
@@ -73,7 +73,7 @@ Characters must be visually distinct to avoid mis‑typing.
 The alphabet evokes the feel of classic cheat devices and cartridge‑era tooling.
 
 ### **3. Encoding Efficiency**
-32 symbols → 5 bits per character → compact 75‑bit payload.
+32 symbols → 5 bits per character → compact [75‑bit payload](encoding.md).
 
 ### **4. Stability**
 Once defined, the alphabet does not change.  
@@ -89,7 +89,7 @@ A GameGenie‑X code such as:
 GX7LW-9A2QF-M4VZ8
 ```
 
-is simply a human‑friendly representation of a 75‑bit binary payload encoded using this alphabet.
+is simply a human‑friendly representation of a [75‑bit payload](encoding.md) encoded using this alphabet.
 
 ---
 

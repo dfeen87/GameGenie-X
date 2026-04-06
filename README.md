@@ -23,12 +23,12 @@ MIT license — just like the old days.
 ---
 
 ## **Core Concept**
-GameGenie‑X uses a compact, custom alphabet to encode:
+GameGenie‑X uses a compact, custom [alphabet](docs/alphabet.md) to encode:
 
-- **target** (save file, config block, memory region)  
-- **offset / key path**  
+- **[target type](docs/patch_model.md)** (save file, config block, memory region)
+- **[offset](docs/patch_model.md)** / key path
 - **new value**  
-- **optional compare value**  
+- **optional [compare value](docs/patch_model.md)**
 - **checksum**  
 
 A code like:
@@ -37,12 +37,12 @@ A code like:
 GX7L-9A2Q-M4VZ
 ```
 
-decodes into a structured patch that GameGenie‑X applies safely and predictably.
+decodes into a structured [patch object](docs/patch_model.md) that GameGenie‑X applies safely and predictably.
 
 ---
 
 ## **Code Alphabet**
-GameGenie‑X uses a 32‑symbol alphabet designed for readability and compactness:
+GameGenie‑X uses a 32‑symbol [alphabet](docs/alphabet.md) designed for readability and compactness:
 
 ```
 A B C D E F G H J K L M N P R S T V W X Y Z 2 3 4 5 6 7 8 9
@@ -61,7 +61,7 @@ A standard GameGenie‑X code is **15 characters**, grouped for readability:
 XXXXX-XXXXX-XXXXX
 ```
 
-Internally, this encodes **75 bits**:
+Internally, this encodes a **[75‑bit payload](docs/encoding.md)**:
 
 | Bits | Purpose |
 |------|---------|
@@ -84,9 +84,9 @@ F2X9W-7K3PZ-9A4TM
 ```
 
 **Decodes to:**  
-- Target: Save file  
+- Target type: Save file
 - Offset: `0x001A4C`  
-- Compare: `0x0005` (only patch if current value is 5)  
+- Compare value: `0x0005` (only patch if current value is 5)
 - New value: `0x03E7` (999 decimal)  
 - Checksum: valid  
 
@@ -96,7 +96,7 @@ F2X9W-7K3PZ-9A4TM
 ---
 
 ## **Game Profiles**
-Each supported game includes a profile describing:
+Each supported game includes a [profile](docs/profiles.md) describing:
 
 - save‑file structure  
 - known offsets  

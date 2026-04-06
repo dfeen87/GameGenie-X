@@ -6,8 +6,8 @@ The GameGenie‑X Patch Model defines how decoded codes are transformed into act
 
 ## Overview
 
-A GameGenie‑X code is a compact 75‑bit instruction.  
-Once decoded, it becomes a structured **Patch Object** that the engine applies to a specific target.
+A GameGenie‑X code is a compact [75‑bit payload](encoding.md) instruction.
+Once decoded, it becomes a structured **patch object** that the engine applies to a specific target.
 
 Patches are:
 
@@ -20,7 +20,7 @@ Patches are:
 
 ## Patch Object Schema
 
-A decoded patch is represented internally as:
+A decoded patch object is represented internally as:
 
 ```json
 {
@@ -36,9 +36,9 @@ A decoded patch is represented internally as:
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `target` | string | `"save"`, `"config"`, or `"memory"` |
+| `target` | string | target type (`"save"`, `"config"`, or `"memory"`) |
 | `offset` | integer | Byte offset or hashed key‑path index |
-| `compare` | integer | Expected current value (optional) |
+| `compare` | integer | Expected current compare value (optional) |
 | `value` | integer | New value to write |
 | `checksum` | string | `"valid"` or `"invalid"` |
 
@@ -50,7 +50,7 @@ A decoded patch is represented internally as:
 Binary or structured save files (e.g., `.dat`, `.sav`, `.bin`).
 
 - Direct byte‑level patching  
-- Type‑aware patching via profile metadata  
+- Type‑aware patching via [profile](profiles.md) metadata
 - Automatic backup before modification  
 
 ### **2. Config Files**
@@ -64,7 +64,7 @@ Offsets may represent:
 
 - key‑path hashes  
 - index positions  
-- mapped fields from the game profile  
+- mapped fields from the game [profile](profiles.md)
 
 ### **3. Memory Snapshots (Optional)**
 Offline, single‑player memory regions captured from a paused process.
@@ -97,7 +97,7 @@ The `compare` field provides a safety check.
 
 ## Patch Application Flow
 
-1. **Decode code → Patch Object**  
+1. **Decode code → patch object**
 2. **Validate checksum**  
 3. **Load target file or memory snapshot**  
 4. **Check compare value (if present)**  
@@ -132,7 +132,7 @@ These principles ensure the project remains fun, safe, and legally clean.
 F2X9W-7K3PZ-9A4TM
 ```
 
-**Decoded Patch:**
+**Decoded patch object:**
 
 ```json
 {

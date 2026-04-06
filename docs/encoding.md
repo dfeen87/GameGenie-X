@@ -1,6 +1,6 @@
 # GameGenie‑X Encoding Scheme
 
-The GameGenie‑X encoding system transforms short, human‑friendly codes into structured patch instructions. This design mirrors the spirit of the original Game Genie while adapting it for modern save‑file and configuration patching.
+The GameGenie‑X encoding system transforms short, human‑friendly codes into structured [patch objects](patch_model.md). This design mirrors the spirit of the original Game Genie while adapting it for modern save‑file and configuration patching.
 
 GameGenie‑X codes are compact, deterministic, and fully self‑contained.
 
@@ -14,7 +14,7 @@ A standard GameGenie‑X code is **15 characters**, grouped for readability:
 XXXXX-XXXXX-XXXXX
 ```
 
-Each character encodes **5 bits** using the GameGenie‑X alphabet.
+Each character encodes **5 bits** using the [GameGenie‑X alphabet](alphabet.md).
 
 Total size:  
 **15 characters × 5 bits = 75 bits**
@@ -29,10 +29,10 @@ The 75‑bit payload is divided into the following fields:
 
 | Bits | Field | Description |
 |------|--------|-------------|
-| 4    | Target Type | save, config, or memory |
-| 20   | Offset / Key Path Hash | location to patch |
-| 16   | New Value | value to write |
-| 16   | Compare Value | optional; 0xFFFF = unused |
+| 4    | Target type | save, config, or memory |
+| 20   | Offset / key path hash | location to patch |
+| 16   | New value | value to write |
+| 16   | Compare value | optional; 0xFFFF = unused |
 | 15   | Checksum | validation and tamper detection |
 
 ### Why this layout?
@@ -46,12 +46,12 @@ The 75‑bit payload is divided into the following fields:
 
 ## Encoding Process
 
-The encoding process converts a structured patch into a 75‑bit binary payload, then maps that payload into the 32‑symbol GameGenie‑X alphabet.
+The encoding process converts a structured [patch object](patch_model.md) into a 75‑bit binary payload, then maps that payload into the 32‑symbol [GameGenie‑X alphabet](alphabet.md).
 
 ### Steps
 
-1. **Start with a Patch Object**  
-   (target, offset, value, compare)
+1. **Start with a [patch object](patch_model.md)**
+   (target type, offset, new value, compare value)
 
 2. **Pack fields into a 75‑bit buffer**  
    - bit‑pack each field according to the layout  
@@ -80,7 +80,7 @@ Decoding reverses the encoding steps:
 3. **Reassemble the 75‑bit payload**  
 4. **Extract fields**  
 5. **Validate checksum**  
-6. **Construct Patch Object**
+6. **Construct [patch object](patch_model.md)**
 
 If the checksum fails, the code is rejected.
 
@@ -146,7 +146,7 @@ Checksum algorithm is defined in the core engine and may evolve as the project m
 F2X9W-7K3PZ-9A4TM
 ```
 
-(This example is conceptual.)
+(This example is conceptual. See [Demo Codes](../examples/demo_codes.md) for more.)
 
 ---
 

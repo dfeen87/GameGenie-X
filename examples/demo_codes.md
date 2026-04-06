@@ -18,7 +18,7 @@ XXXXX-XXXXX-XXXXX
 F2X9W-7K3PZ-9A4TM
 ```
 
-**Decoded Patch:**
+**Decoded patch object:**
 
 ```json
 {
@@ -42,7 +42,7 @@ Sets the player's potion count to **999**, but only if the current value is **5*
 W7R2M-X9F4A-2T3PV
 ```
 
-**Decoded Patch:**
+**Decoded patch object:**
 
 ```json
 {
@@ -66,7 +66,7 @@ Sets the player's gold to **999,999** unconditionally.
 K9V3T-2A7LW-8R5MX
 ```
 
-**Decoded Patch:**
+**Decoded patch object:**
 
 ```json
 {
@@ -90,7 +90,7 @@ If the player's current health is **100**, set it to **9999**.
 M4Z8R-7W2KP-3X9LT
 ```
 
-**Decoded Patch:**
+**Decoded patch object:**
 
 ```json
 {
@@ -114,7 +114,7 @@ Sets the "skills_unlocked" flag to **true** in the config file.
 R8T2W-5K9LM-7A3VX
 ```
 
-**Decoded Patch:**
+**Decoded patch object:**
 
 ```json
 {
@@ -133,9 +133,9 @@ Sets the player's XP to **1,000,000**.
 
 ## Notes
 
-- These codes are **illustrative**, not tied to a real game profile.  
+- These codes are **illustrative**, not tied to a real game [profile](../docs/profiles.md).
 - Actual offsets and values depend on each game's profile.  
-- All examples follow the official 75‑bit encoding structure.  
+- All examples follow the official [75‑bit payload](../docs/encoding.md).
 - Checksum values shown as `"valid"` for clarity.
 
 ---
