@@ -4,11 +4,11 @@ from __future__ import annotations
 
 import tomllib
 from dataclasses import dataclass
-from pathlib import Path
+from importlib import resources
 
 from gamegenie_x.models import Flags, Patch, PatchType, Platform
 
-PROFILES_DIR: Path = Path(__file__).resolve().parent.parent.parent / "profiles"
+_PROFILES_PACKAGE = "gamegenie_x.profiles_data"
 
 @dataclass(frozen=True, slots=True)
 class IOStrategy:
@@ -60,15 +60,13 @@ def load_profile(platform: Platform | str) -> PlatformProfile:
     else:
         file_name = f"{platform.lower()}.toml"
 
-    profile_path = PROFILES_DIR / file_name
-    if not profile_path.exists():
-        raise FileNotFoundError(f"Profile file not found: {profile_path}")
-
     try:
-        with open(profile_path, "rb") as f:
+        with resources.files(_PROFILES_PACKAGE).joinpath(file_name).open("rb") as f:
             data = tomllib.load(f)
+    except FileNotFoundError as e:
+        raise FileNotFoundError(f"Profile file not found: {_PROFILES_PACKAGE}/{file_name}") from e
     except Exception as e:
-        raise ValueError(f"Failed to parse profile {profile_path}: {e}") from e
+        raise ValueError(f"Failed to parse profile {_PROFILES_PACKAGE}/{file_name}: {e}") from e
 
     try:
         plat_data = data["platform"]
@@ -120,9 +118,9 @@ def load_profile(platform: Platform | str) -> PlatformProfile:
             fields=fields,
         )
     except KeyError as e:
-        raise ValueError(f"Malformed profile {profile_path}: missing key {e}") from e
+        raise ValueError(f"Malformed profile {_PROFILES_PACKAGE}/{file_name}: missing key {e}") from e
     except ValueError as e:
-        raise ValueError(f"Malformed profile {profile_path}: invalid value ({e})") from e
+        raise ValueError(f"Malformed profile {_PROFILES_PACKAGE}/{file_name}: invalid value ({e})") from e
 
 
 # TODO(don): doc says Game profiles in JSON but Platform profiles in TOML seem intended — clarify
@@ -133,21 +131,19 @@ def load_all_profiles() -> dict[Platform | str, PlatformProfile]:
         A dict mapping Platform enums or string IDs to PlatformProfiles.
     """
     profiles: dict[Platform | str, PlatformProfile] = {}
-    if not PROFILES_DIR.exists():
-        return profiles
 
-    for toml_file in PROFILES_DIR.glob("*.toml"):
+    root = resources.files(_PROFILES_PACKAGE)
+    for entry in root.iterdir():
+        if not entry.name.endswith(".toml"):
+            continue
+
         try:
-            with open(toml_file, "rb") as f:
+            with entry.open("rb") as f:
                 data = tomllib.load(f)
             plat_id = data["platform"]["id"]
             platform = Platform(plat_id) if isinstance(plat_id, int) else str(plat_id)
             profiles[platform] = load_profile(platform)
         except Exception:
-            # Ignore files that fail to load during bulk load,
-            # or maybe just raise? The contract doesn't say. Let's pass over them
-            # or actually it's better to log or just raise.
-            # Let's be strict.
             raise
     return profiles
 
