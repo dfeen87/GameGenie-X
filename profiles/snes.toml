@@ -1,1 +1,18 @@
+[platform]
+id = 1
+name = "Super Nintendo Entertainment System"
+short_name = "SNES"
 
+[address]
+bits = 24
+max = 0xFFFFFF
+
+[data]
+bits = 8
+
+[compare]
+supported = false
+
+[defaults]
+patch_type = "REPLACE"
+flags = { compare_enabled = false, wide_data = false, read_only = false, persistent = false }

@@ -1,1 +1,18 @@
+[platform]
+id = 3
+name = "Game Boy"
+short_name = "GAMEBOY"
 
+[address]
+bits = 16
+max = 0xFFFF
+
+[data]
+bits = 8
+
+[compare]
+supported = true
+
+[defaults]
+patch_type = "REPLACE"
+flags = { compare_enabled = false, wide_data = false, read_only = false, persistent = false }
