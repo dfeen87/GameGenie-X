@@ -130,8 +130,9 @@ This project is licensed under the **MIT License**, honoring the spirit of the o
 ---
 
 ## **Status**
-Early prototype.  
-Encoding engine + patch engine under active development.
+
+Stable v1.0.0 release (April 5, 2026).  
+Core encoding engine, profile system, and patch engine are production-ready.
 
 ---
 
