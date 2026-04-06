@@ -1,0 +1,44 @@
+[platform]
+id = "xboxone"
+name = "Xbox One"
+short_name = "XB1"
+
+[address]
+bits = 32
+max = 0xFFFFFFFF
+
+[data]
+bits = 8
+endianness = "little"
+
+[compare]
+supported = true
+behavior = "exact"
+
+[defaults]
+patch_type = "REPLACE"
+flags = { compare_enabled = false, wide_data = false, read_only = false, persistent = false }
+
+[io]
+strategy = "binary"
+save_formats = ["bin", "json"]
+
+[fields.currency]
+offset = 0x1000
+type = "int"
+description = "Player currency (integer)"
+
+[fields.level]
+offset = 0x1004
+type = "int"
+description = "Player level (integer)"
+
+[fields.is_unlocked]
+offset = 0x1008
+type = "bool"
+description = "Unlock all items (boolean)"
+
+[fields.flags]
+offset = 0x100C
+type = "bitfield"
+description = "Game progression flags"

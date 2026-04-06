@@ -11,9 +11,22 @@ from gamegenie_x.models import Flags, Patch, PatchType, Platform
 PROFILES_DIR: Path = Path(__file__).resolve().parent.parent.parent / "profiles"
 
 @dataclass(frozen=True, slots=True)
+class IOStrategy:
+    """I/O strategy configurations for modern platform profiles."""
+    strategy: str
+    save_formats: list[str]
+
+@dataclass(frozen=True, slots=True)
+class FieldDef:
+    """Definition for a patchable field in modern platform profiles."""
+    offset: int | str
+    type: str
+    description: str
+
+@dataclass(frozen=True, slots=True)
 class PlatformProfile:
     """Platform-specific constraints and defaults."""
-    platform: Platform
+    platform: Platform | str           # Platform enum or string ID for external profiles
     name: str                          # Human-readable name
     short_name: str                    # e.g. "NES"
     address_bits: int                  # Usable address bits
@@ -22,13 +35,16 @@ class PlatformProfile:
     compare_supported: bool            # Whether compare byte is meaningful
     default_patch_type: PatchType      # Default if not specified
     default_flags: Flags               # Default flags for this platform
+    endianness: str = "little"         # Memory endianness
+    io_strategy: IOStrategy | None = None
+    fields: dict[str, FieldDef] | None = None
 
 
-def load_profile(platform: Platform) -> PlatformProfile:
+def load_profile(platform: Platform | str) -> PlatformProfile:
     """Loads and parses the TOML file for the given platform.
 
     Args:
-        platform: The Platform enum value to load.
+        platform: The Platform enum value or string ID to load.
 
     Returns:
         The loaded PlatformProfile.
@@ -37,9 +53,12 @@ def load_profile(platform: Platform) -> PlatformProfile:
         FileNotFoundError: If the corresponding TOML file is missing.
         ValueError: If the TOML file is malformed or invalid.
     """
-    file_name = f"{platform.name.lower()}.toml"
-    if platform == Platform.UNIVERSAL:
-        raise ValueError("Cannot load profile for UNIVERSAL platform")
+    if isinstance(platform, Platform):
+        if platform == Platform.UNIVERSAL:
+            raise ValueError("Cannot load profile for UNIVERSAL platform")
+        file_name = f"{platform.name.lower()}.toml"
+    else:
+        file_name = f"{platform.lower()}.toml"
 
     profile_path = PROFILES_DIR / file_name
     if not profile_path.exists():
@@ -66,8 +85,31 @@ def load_profile(platform: Platform) -> PlatformProfile:
             persistent=flags_dict.get("persistent", False),
         )
 
+        io_strategy = None
+        if "io" in data:
+            io_strategy = IOStrategy(
+                strategy=data["io"].get("strategy", "binary"),
+                save_formats=data["io"].get("save_formats", [])
+            )
+
+        fields = None
+        if "fields" in data:
+            fields = {}
+            for k, v in data["fields"].items():
+                fields[k] = FieldDef(
+                    offset=v["offset"],
+                    type=v["type"],
+                    description=v["description"],
+                )
+
+        plat_id = plat_data["id"]
+        if isinstance(plat_id, int):
+            parsed_platform = Platform(plat_id)
+        else:
+            parsed_platform = str(plat_id)
+
         return PlatformProfile(
-            platform=Platform(plat_data["id"]),
+            platform=parsed_platform,
             name=plat_data["name"],
             short_name=plat_data["short_name"],
             address_bits=addr_data["bits"],
@@ -76,6 +118,9 @@ def load_profile(platform: Platform) -> PlatformProfile:
             compare_supported=comp_data["supported"],
             default_patch_type=PatchType[def_data["patch_type"]],
             default_flags=default_flags,
+            endianness=data_data.get("endianness", "little"),
+            io_strategy=io_strategy,
+            fields=fields,
         )
     except KeyError as e:
         raise ValueError(f"Malformed profile {profile_path}: missing key {e}") from e
@@ -84,13 +129,13 @@ def load_profile(platform: Platform) -> PlatformProfile:
 
 
 # TODO(don): doc says Game profiles in JSON but Platform profiles in TOML seem intended — clarify
-def load_all_profiles() -> dict[Platform, PlatformProfile]:
+def load_all_profiles() -> dict[Platform | str, PlatformProfile]:
     """Loads all .toml files from PROFILES_DIR.
 
     Returns:
-        A dict mapping Platform enums to PlatformProfiles.
+        A dict mapping Platform enums or string IDs to PlatformProfiles.
     """
-    profiles: dict[Platform, PlatformProfile] = {}
+    profiles: dict[Platform | str, PlatformProfile] = {}
     if not PROFILES_DIR.exists():
         return profiles
 
@@ -99,7 +144,10 @@ def load_all_profiles() -> dict[Platform, PlatformProfile]:
             with open(toml_file, "rb") as f:
                 data = tomllib.load(f)
             plat_id = data["platform"]["id"]
-            platform = Platform(plat_id)
+            if isinstance(plat_id, int):
+                platform = Platform(plat_id)
+            else:
+                platform = str(plat_id)
             profiles[platform] = load_profile(platform)
         except Exception:
             # Ignore files that fail to load during bulk load,
@@ -122,11 +170,22 @@ def validate_patch(patch: Patch, profile: PlatformProfile) -> list[str]:
     """
     errors = []
 
-    if patch.platform != profile.platform:
-        errors.append(
-            f"Platform mismatch: patch has {patch.platform.name}, "
-            f"profile is {profile.platform.name}"
-        )
+    # Validation logic depends on if profile.platform is an enum or string
+    profile_plat_name = profile.platform.name if isinstance(profile.platform, Platform) else profile.platform
+
+    # External profiles use UNIVERSAL for the patch enum platform usually
+    if isinstance(profile.platform, str):
+        if patch.platform != Platform.UNIVERSAL:
+            errors.append(
+                f"Platform mismatch: external profile '{profile_plat_name}' expects patch "
+                f"platform to be UNIVERSAL, but got {patch.platform.name}"
+            )
+    else:
+        if patch.platform != profile.platform:
+            errors.append(
+                f"Platform mismatch: patch has {patch.platform.name}, "
+                f"profile is {profile_plat_name}"
+            )
 
     if patch.address > profile.max_address:
         errors.append(

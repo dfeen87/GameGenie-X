@@ -54,25 +54,34 @@ def get_parser() -> argparse.ArgumentParser:
     # Validate subcommand
     validate_parser = subparsers.add_parser("validate", help="Validate a code string")
     validate_parser.add_argument("code", type=str, help="The GameGenie-X code string")
+    validate_parser.add_argument(
+        "--platform", type=str, help="External platform ID (e.g. xboxone) for validation"
+    )
 
     # Info subcommand
     info_parser = subparsers.add_parser("info", help="Print platform profile details")
     info_parser.add_argument(
-        "--platform", required=True, type=str, help="Platform name (e.g., NES)"
+        "--platform", required=True, type=str, help="Platform name or external ID (e.g., NES or xboxone)"
     )
 
     # List subcommand
     subparsers.add_parser("list", help="List all supported platform profiles")
 
+    # Patch subcommand
+    patch_parser = subparsers.add_parser("patch", help="Apply a patch code to a file")
+    patch_parser.add_argument("code", type=str, help="The GameGenie-X code string")
+    patch_parser.add_argument("file", type=str, help="Path to the save file or config to patch")
+    patch_parser.add_argument("--platform", required=True, type=str, help="Platform name or external ID")
+
     return parser
 
 
-def parse_platform(name: str) -> Platform:
-    """Parses a platform name string to a Platform enum."""
+def parse_platform(name: str) -> Platform | str:
+    """Parses a platform name string to a Platform enum or string ID."""
     try:
         return Platform[name.upper()]
-    except KeyError as e:
-        raise ValueError(f"Unknown platform: {name}") from e
+    except KeyError:
+        return name.lower()
 
 
 def parse_patch_type(name: str) -> PatchType:
@@ -137,7 +146,12 @@ def main() -> None:
         elif args.command == "validate":
             try:
                 patch = decoder.decode(args.code)
-                profile = profiles.load_profile(patch.platform)
+                if getattr(args, "platform", None):
+                    target_plat = parse_platform(args.platform)
+                    profile = profiles.load_profile(target_plat)
+                else:
+                    profile = profiles.load_profile(patch.platform)
+
                 errors = profiles.validate_patch(patch, profile)
                 if errors:
                     print("INVALID")
@@ -158,7 +172,10 @@ def main() -> None:
             platform = parse_platform(args.platform)
             profile = profiles.load_profile(platform)
             print(f"Profile: {profile.name} ({profile.short_name})")
-            print(f"Platform ID: {profile.platform.value}")
+            if isinstance(profile.platform, Platform):
+                print(f"Platform ID: {profile.platform.value} (Internal)")
+            else:
+                print(f"Platform ID: {profile.platform} (External)")
             print(f"Address Bits: {profile.address_bits} (Max: 0x{profile.max_address:X})")
             print(f"Data Bits: {profile.data_bits}")
             print(f"Compare Supported: {profile.compare_supported}")
@@ -170,15 +187,73 @@ def main() -> None:
                 f"persistent={profile.default_flags.persistent}"
             )
             print(f"Default Flags: {flags_str}")
+            if profile.io_strategy:
+                print("IO Strategy:")
+                print(f"  Format: {profile.io_strategy.strategy}")
+                print(f"  Save Formats: {', '.join(profile.io_strategy.save_formats)}")
+            if profile.fields:
+                print("Example Fields:")
+                for k, v in profile.fields.items():
+                    print(f"  {k}: offset=0x{v.offset:X}, type={v.type}")
+                    print(f"    {v.description}")
 
         elif args.command == "list":
             all_profiles = profiles.load_all_profiles()
-            print(f"{'ID':<4} | {'Short Name':<12} | {'Name'}")
+            print(f"{'ID':<10} | {'Short Name':<12} | {'Name'}")
             print("-" * 55)
+
+            # Separate internal and external profiles
+            internal_profiles = []
+            external_profiles = []
+            for k, p in all_profiles.items():
+                if isinstance(k, Platform):
+                    internal_profiles.append(p)
+                else:
+                    external_profiles.append(p)
+
             # Sort by Platform ID for consistent output
-            for plat_id in sorted(all_profiles.keys(), key=lambda p: p.value):
-                prof = all_profiles[plat_id]
-                print(f"0x{prof.platform.value:<2X} | {prof.short_name:<12} | {prof.name}")
+            internal_profiles.sort(key=lambda p: p.platform.value) # type: ignore
+            external_profiles.sort(key=lambda p: p.platform)
+
+            for prof in internal_profiles:
+                # Type guard, we know it's a Platform here
+                val = getattr(prof.platform, "value", 0)
+                print(f"0x{val:<8X} | {prof.short_name:<12} | {prof.name}")
+
+            for prof in external_profiles:
+                print(f"{str(prof.platform):<10} | {prof.short_name:<12} | {prof.name}")
+
+        elif args.command == "patch":
+            from gamegenie_x.patcher import apply_patch_to_file
+
+            plat = parse_platform(args.platform)
+            profile = profiles.load_profile(plat)
+
+            try:
+                patch = decoder.decode(args.code)
+            except decoder.ChecksumError as e:
+                print(f"Checksum Error: {e}", file=sys.stderr)
+                sys.exit(2)
+            except ValueError as e:
+                print(f"Error: {e}", file=sys.stderr)
+                sys.exit(1)
+
+            errors = profiles.validate_patch(patch, profile)
+            if errors:
+                print("Error: Invalid patch for platform:", file=sys.stderr)
+                for err in errors:
+                    print(f"- {err}", file=sys.stderr)
+                sys.exit(2)
+
+            try:
+                applied = apply_patch_to_file(patch, args.file, profile)
+                if applied:
+                    print(f"Successfully applied patch to {args.file}")
+                else:
+                    print("Patch conditions not met (compare failed or unchanged).")
+            except Exception as e:
+                print(f"Failed to apply patch: {e}", file=sys.stderr)
+                sys.exit(1)
 
     except Exception as e:
         print(f"Error: {e}", file=sys.stderr)

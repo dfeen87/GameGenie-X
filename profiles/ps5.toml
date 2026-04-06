@@ -1,0 +1,44 @@
+[platform]
+id = "ps5"
+name = "PlayStation 5"
+short_name = "PS5"
+
+[address]
+bits = 32
+max = 0xFFFFFFFF
+
+[data]
+bits = 8
+endianness = "little"
+
+[compare]
+supported = true
+behavior = "exact"
+
+[defaults]
+patch_type = "REPLACE"
+flags = { compare_enabled = false, wide_data = false, read_only = false, persistent = false }
+
+[io]
+strategy = "container"
+save_formats = ["bin", "sfo", "container"]
+
+[fields.currency]
+offset = 0x4000
+type = "int"
+description = "Player currency (integer)"
+
+[fields.level]
+offset = 0x4004
+type = "int"
+description = "Player level (integer)"
+
+[fields.is_unlocked]
+offset = 0x4008
+type = "bool"
+description = "Unlock all items (boolean)"
+
+[fields.flags]
+offset = 0x400C
+type = "bitfield"
+description = "Game progression flags"
