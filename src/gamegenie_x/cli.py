@@ -104,7 +104,7 @@ def main() -> None:
 
     try:
         if args.command == "encode":
-            platform = parse_platform(args.platform)
+            platform_parsed = parse_platform(args.platform)
             patch_type = parse_patch_type(args.type)
             flags = Flags(
                 compare_enabled=args.compare_enabled,
@@ -116,7 +116,7 @@ def main() -> None:
                 address=args.address,
                 value=args.value,
                 compare=args.compare,
-                platform=platform,
+                platform=platform_parsed if isinstance(platform_parsed, Platform) else Platform.UNIVERSAL,
                 patch_type=patch_type,
                 flags=flags,
             )
@@ -174,8 +174,8 @@ def main() -> None:
                 sys.exit(2)
 
         elif args.command == "info":
-            platform = parse_platform(args.platform)
-            profile = profiles.load_profile(platform)
+            platform_info = parse_platform(args.platform)
+            profile = profiles.load_profile(platform_info)
             print(f"Profile: {profile.name} ({profile.short_name})")
             if isinstance(profile.platform, Platform):
                 print(f"Platform ID: {profile.platform.value} (Internal)")
@@ -208,17 +208,22 @@ def main() -> None:
             print("-" * 55)
 
             # Separate internal and external profiles
-            internal_profiles = []
-            external_profiles = []
-            for k, p in all_profiles.items():
+            from gamegenie_x.profiles import PlatformProfile
+
+            internal_profiles: list[PlatformProfile] = []
+            external_profiles: list[PlatformProfile] = []
+            # Ignore the type assignment issue for k being bound in loop scope
+            # where it can be Platform | str
+            for k, p in all_profiles.items():  # type: ignore[assignment]
                 if isinstance(k, Platform):
                     internal_profiles.append(p)
                 else:
+                    # external profile has str key
                     external_profiles.append(p)
 
             # Sort by Platform ID for consistent output
-            internal_profiles.sort(key=lambda p: p.platform.value) # type: ignore
-            external_profiles.sort(key=lambda p: p.platform)
+            internal_profiles.sort(key=lambda p: getattr(p.platform, "value", 0))
+            external_profiles.sort(key=lambda p: str(p.platform))
 
             for prof in internal_profiles:
                 # Type guard, we know it's a Platform here
