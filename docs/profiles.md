@@ -1,12 +1,12 @@
 # GameGenie‑X Game Profiles
 
-GameGenie‑X uses **Game Profiles** to understand how to safely modify a specific game's save files, configuration files, or memory snapshots. Profiles provide structure, metadata, and field definitions that allow encoded patches to be applied deterministically.
+GameGenie‑X uses **profiles** to understand how to safely modify a specific game's save files, configuration files, or memory snapshots. Profiles provide structure, metadata, and field definitions that allow encoded [patch objects](patch_model.md) to be applied deterministically.
 
 Profiles live in the `profiles/` directory and are written in JSON for clarity and portability.
 
 ---
 
-## Purpose of Profiles
+## Purpose of profiles
 
 Profiles define:
 

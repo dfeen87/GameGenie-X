@@ -33,7 +33,7 @@ This phase defines the conceptual backbone of the project.
 - Encoder stub → full implementation
 - Decoder stub → full implementation
 - Checksum algorithm
-- Patch object validation
+- [patch object](patch_model.md) validation
 - Patch application for binary save files
 - Profile loader and type‑aware field handling
 - Automatic save‑file backups
@@ -66,7 +66,7 @@ This phase makes GameGenie‑X practical and accessible.
 - JSON/YAML/INI config patching
 - Multi‑field patches
 - Patch bundles
-- Community profile format
+- Community [profile](profiles.md) format
 - Profile versioning
 - Auto‑generated profiles via save‑file scanning
 
