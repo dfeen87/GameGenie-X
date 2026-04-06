@@ -1,6 +1,6 @@
-import pytest
 from gamegenie_x.models import Platform
-from gamegenie_x.profiles import load_profile, load_all_profiles, PlatformProfile
+from gamegenie_x.profiles import load_all_profiles, load_profile
+
 
 def test_load_xboxone_profile() -> None:
     profile = load_profile("xboxone")

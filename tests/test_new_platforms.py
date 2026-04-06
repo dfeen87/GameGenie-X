@@ -1,5 +1,5 @@
-import pytest
 from gamegenie_x.models import Patch
+
 
 def test_nds_patch_fixture(nds_patch: Patch) -> None:
     assert nds_patch.address == 0x02000000

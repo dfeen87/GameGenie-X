@@ -1,0 +1,74 @@
+name: CI
+
+on:
+  push:
+    branches: ["main", "master"]
+  pull_request:
+    branches: ["main", "master"]
+
+permissions: read-all
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: "Test / Python ${{ matrix.python-version }}"
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+      matrix:
+        python-version: ["3.11", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ matrix.python-version }}-${{ hashFiles('pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-${{ matrix.python-version }}-
+            ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade --no-cache-dir pip
+          pip install --upgrade --no-cache-dir ".[dev]" ruff mypy pytest pytest-cov 2>/dev/null || \
+          pip install --upgrade --no-cache-dir -e . ruff mypy pytest pytest-cov
+
+      - name: Lint with ruff
+        run: ruff check src/ tests/
+
+      - name: Type-check with mypy
+        run: mypy --strict src/gamegenie_x/
+
+      - name: Run tests with coverage
+        run: |
+          pytest tests/ \
+            --cov=gamegenie_x \
+            --cov-report=xml:coverage.xml \
+            --cov-report=term-missing \
+            --junitxml=test-results.xml
+
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-${{ matrix.python-version }}
+          path: coverage.xml
+          if-no-files-found: warn
+
+      - name: Upload test results artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results-${{ matrix.python-version }}
+          path: test-results.xml
+          if-no-files-found: warn

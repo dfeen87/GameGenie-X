@@ -1,6 +1,8 @@
 # **GameGenie‑X**  
 *A modern, MIT‑licensed reinterpretation of the classic Game Genie — rebuilt for single‑player game enhancement, save‑file patching, and sandbox modifiers.*
 
+[![CI](https://github.com/dfeen87/GameGenie-X/actions/workflows/ci.yml/badge.svg)](https://github.com/dfeen87/GameGenie-X/actions/workflows/ci.yml) [![Coverage](https://img.shields.io/badge/coverage-tracked-brightgreen)](https://github.com/dfeen87/GameGenie-X/actions/workflows/ci.yml) [![Python](https://img.shields.io/badge/python-3.11%2B-blue)](https://www.python.org/) [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE) [![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000)](https://github.com/astral-sh/ruff) [![Typed: mypy](https://img.shields.io/badge/typed-mypy-blue)](https://mypy-lang.org/)
+
 ---
 
 ## **Overview**

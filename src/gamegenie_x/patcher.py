@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import json
-import os
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from gamegenie_x.models import Patch, PatchType
-from gamegenie_x.profiles import PlatformProfile
+
+if TYPE_CHECKING:
+    from gamegenie_x.profiles import PlatformProfile
 
 
 def apply_patch_to_file(patch: Patch, filepath: str | Path, profile: PlatformProfile) -> bool:
@@ -78,9 +80,10 @@ def _apply_binary(patch: Patch, path: Path, profile: PlatformProfile) -> bool:
 
     current_value = data[offset]
 
-    if patch.flags.compare_enabled or (profile.compare_supported and patch.compare > 0):
-        if current_value != patch.compare:
-            return False
+    if (patch.flags.compare_enabled or (profile.compare_supported and patch.compare > 0)) and (
+        current_value != patch.compare
+    ):
+        return False
 
     new_value = _calculate_new_value(current_value, patch)
 
@@ -96,7 +99,7 @@ def _apply_binary(patch: Patch, path: Path, profile: PlatformProfile) -> bool:
 
 def _apply_json(patch: Patch, path: Path, profile: PlatformProfile) -> bool:
     """Applies patch to a JSON file."""
-    with open(path, "r", encoding="utf-8") as f:
+    with open(path, encoding="utf-8") as f:
         data = json.load(f)
 
     field_path = str(patch.address)
@@ -120,9 +123,10 @@ def _apply_json(patch: Patch, path: Path, profile: PlatformProfile) -> bool:
         # We can only patch integers or booleans mapped to integers
         raise ValueError(f"Cannot patch non-integer JSON value at {field_path}")
 
-    if patch.flags.compare_enabled or (profile.compare_supported and patch.compare > 0):
-        if current_value != patch.compare:
-            return False
+    if (patch.flags.compare_enabled or (profile.compare_supported and patch.compare > 0)) and (
+        current_value != patch.compare
+    ):
+        return False
 
     new_value = _calculate_new_value(current_value, patch)
 
