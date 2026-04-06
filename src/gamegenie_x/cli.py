@@ -61,6 +61,9 @@ def get_parser() -> argparse.ArgumentParser:
         "--platform", required=True, type=str, help="Platform name (e.g., NES)"
     )
 
+    # List subcommand
+    subparsers.add_parser("list", help="List all supported platform profiles")
+
     return parser
 
 
@@ -168,6 +171,18 @@ def main() -> None:
             )
             print(f"Default Flags: {flags_str}")
 
+        elif args.command == "list":
+            all_profiles = profiles.load_all_profiles()
+            print(f"{'ID':<4} | {'Short Name':<12} | {'Name'}")
+            print("-" * 55)
+            # Sort by Platform ID for consistent output
+            for plat_id in sorted(all_profiles.keys(), key=lambda p: p.value):
+                prof = all_profiles[plat_id]
+                print(f"0x{prof.platform.value:<2X} | {prof.short_name:<12} | {prof.name}")
+
     except Exception as e:
         print(f"Error: {e}", file=sys.stderr)
         sys.exit(1)
+
+if __name__ == "__main__":
+    main()

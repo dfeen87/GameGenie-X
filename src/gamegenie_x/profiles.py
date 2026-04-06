@@ -83,6 +83,7 @@ def load_profile(platform: Platform) -> PlatformProfile:
         raise ValueError(f"Malformed profile {profile_path}: invalid value ({e})") from e
 
 
+# TODO(don): doc says Game profiles in JSON but Platform profiles in TOML seem intended — clarify
 def load_all_profiles() -> dict[Platform, PlatformProfile]:
     """Loads all .toml files from PROFILES_DIR.
 

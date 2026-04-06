@@ -30,6 +30,16 @@ def test_profiles_load_all_profiles() -> None:
     assert Platform.GENESIS in profiles
     assert Platform.GAMEBOY in profiles
     assert Platform.GAMEGEAR in profiles
+    assert Platform.NDS in profiles
+    assert Platform.N3DS in profiles
+    assert Platform.PSP in profiles
+    assert Platform.PSVITA in profiles
+    assert Platform.SWITCH in profiles
+    assert Platform.DOLPHIN in profiles
+    assert Platform.CITRA in profiles
+    assert Platform.RPCS3 in profiles
+    assert Platform.YUZU in profiles
+    assert Platform.PC in profiles
 
 
 def test_profiles_validate_good_patch(nes_patch: Patch) -> None:
