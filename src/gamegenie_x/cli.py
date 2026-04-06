@@ -4,6 +4,10 @@ from __future__ import annotations
 
 import argparse
 import sys
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from gamegenie_x.profiles import PlatformProfile
 
 from gamegenie_x import decoder, encoder, profiles
 from gamegenie_x.models import Flags, Patch, PatchType, Platform
@@ -116,7 +120,11 @@ def main() -> None:
                 address=args.address,
                 value=args.value,
                 compare=args.compare,
-                platform=platform_parsed if isinstance(platform_parsed, Platform) else Platform.UNIVERSAL,
+                platform=(
+                    platform_parsed
+                    if isinstance(platform_parsed, Platform)
+                    else Platform.UNIVERSAL
+                ),
                 patch_type=patch_type,
                 flags=flags,
             )
@@ -208,8 +216,6 @@ def main() -> None:
             print("-" * 55)
 
             # Separate internal and external profiles
-            from gamegenie_x.profiles import PlatformProfile
-
             internal_profiles: list[PlatformProfile] = []
             external_profiles: list[PlatformProfile] = []
             # Ignore the type assignment issue for k being bound in loop scope
