@@ -118,9 +118,13 @@ def load_profile(platform: Platform | str) -> PlatformProfile:
             fields=fields,
         )
     except KeyError as e:
-        raise ValueError(f"Malformed profile {_PROFILES_PACKAGE}/{file_name}: missing key {e}") from e
+        raise ValueError(
+            f"Malformed profile {_PROFILES_PACKAGE}/{file_name}: missing key {e}"
+        ) from e
     except ValueError as e:
-        raise ValueError(f"Malformed profile {_PROFILES_PACKAGE}/{file_name}: invalid value ({e})") from e
+        raise ValueError(
+            f"Malformed profile {_PROFILES_PACKAGE}/{file_name}: invalid value ({e})"
+        ) from e
 
 
 # TODO(don): doc says Game profiles in JSON but Platform profiles in TOML seem intended — clarify
