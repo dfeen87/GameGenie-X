@@ -1,9 +1,10 @@
-import sys
 import subprocess
-import pytest
+import sys
 from pathlib import Path
+
 from gamegenie_x.encoder import encode
-from gamegenie_x.models import Patch, PatchType, Platform, Flags
+from gamegenie_x.models import Patch, Platform
+
 
 def run_cli(*args: str) -> subprocess.CompletedProcess[str]:
     """Helper to run the CLI as a subprocess."""

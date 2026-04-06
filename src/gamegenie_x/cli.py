@@ -61,7 +61,10 @@ def get_parser() -> argparse.ArgumentParser:
     # Info subcommand
     info_parser = subparsers.add_parser("info", help="Print platform profile details")
     info_parser.add_argument(
-        "--platform", required=True, type=str, help="Platform name or external ID (e.g., NES or xboxone)"
+        "--platform",
+        required=True,
+        type=str,
+        help="Platform name or external ID (e.g., NES or xboxone)",
     )
 
     # List subcommand
@@ -71,7 +74,9 @@ def get_parser() -> argparse.ArgumentParser:
     patch_parser = subparsers.add_parser("patch", help="Apply a patch code to a file")
     patch_parser.add_argument("code", type=str, help="The GameGenie-X code string")
     patch_parser.add_argument("file", type=str, help="Path to the save file or config to patch")
-    patch_parser.add_argument("--platform", required=True, type=str, help="Platform name or external ID")
+    patch_parser.add_argument(
+        "--platform", required=True, type=str, help="Platform name or external ID"
+    )
 
     return parser
 

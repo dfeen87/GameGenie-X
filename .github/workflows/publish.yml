@@ -1,0 +1,36 @@
+# Publish workflow — DISABLED (scaffold only)
+# To enable: remove the `if: false` guard below and configure PYPI_API_TOKEN secret.
+name: Publish
+
+on:
+  release:
+    types: [published]
+
+permissions: read-all
+
+jobs:
+  publish:
+    name: Publish to PyPI
+    runs-on: ubuntu-latest
+    if: false  # Remove this line to enable publishing
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install build tools
+        run: |
+          pip install --upgrade --no-cache-dir pip build twine
+
+      - name: Build distribution
+        run: python -m build
+
+      - name: Publish to PyPI
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+        run: twine upload dist/*

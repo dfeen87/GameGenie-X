@@ -1,8 +1,10 @@
-import pytest
 import random
-from gamegenie_x.models import Patch, Platform, Flags, PatchType
-from gamegenie_x.encoder import encode
+
+import pytest
+
 from gamegenie_x.decoder import decode
+from gamegenie_x.encoder import encode
+from gamegenie_x.models import Flags, Patch, PatchType, Platform
 
 # Fuzz tests for modern platforms
 MODERN_PLATFORMS = [

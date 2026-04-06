@@ -103,10 +103,7 @@ def load_profile(platform: Platform | str) -> PlatformProfile:
                 )
 
         plat_id = plat_data["id"]
-        if isinstance(plat_id, int):
-            parsed_platform = Platform(plat_id)
-        else:
-            parsed_platform = str(plat_id)
+        parsed_platform = Platform(plat_id) if isinstance(plat_id, int) else str(plat_id)
 
         return PlatformProfile(
             platform=parsed_platform,
@@ -144,10 +141,7 @@ def load_all_profiles() -> dict[Platform | str, PlatformProfile]:
             with open(toml_file, "rb") as f:
                 data = tomllib.load(f)
             plat_id = data["platform"]["id"]
-            if isinstance(plat_id, int):
-                platform = Platform(plat_id)
-            else:
-                platform = str(plat_id)
+            platform = Platform(plat_id) if isinstance(plat_id, int) else str(plat_id)
             profiles[platform] = load_profile(platform)
         except Exception:
             # Ignore files that fail to load during bulk load,
@@ -171,7 +165,9 @@ def validate_patch(patch: Patch, profile: PlatformProfile) -> list[str]:
     errors = []
 
     # Validation logic depends on if profile.platform is an enum or string
-    profile_plat_name = profile.platform.name if isinstance(profile.platform, Platform) else profile.platform
+    profile_plat_name = (
+        profile.platform.name if isinstance(profile.platform, Platform) else profile.platform
+    )
 
     # External profiles use UNIVERSAL for the patch enum platform usually
     if isinstance(profile.platform, str):
