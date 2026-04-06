@@ -13,7 +13,16 @@ class Platform(enum.IntEnum):
     GENESIS   = 0x2
     GAMEBOY   = 0x3
     GAMEGEAR  = 0x4
-    # 0x5–0xE reserved for future platforms
+    NDS       = 0x5
+    N3DS      = 0x6
+    PSP       = 0x7
+    PSVITA    = 0x8
+    SWITCH    = 0x9
+    DOLPHIN   = 0xA
+    CITRA     = 0xB
+    RPCS3     = 0xC
+    YUZU      = 0xD
+    PC        = 0xE
     UNIVERSAL = 0xF
 
 

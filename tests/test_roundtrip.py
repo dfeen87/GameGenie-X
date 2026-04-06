@@ -15,6 +15,16 @@ from gamegenie_x.models import Flags, Patch, PatchType, Platform
         Platform.GENESIS,
         Platform.GAMEBOY,
         Platform.GAMEGEAR,
+        Platform.NDS,
+        Platform.N3DS,
+        Platform.PSP,
+        Platform.PSVITA,
+        Platform.SWITCH,
+        Platform.DOLPHIN,
+        Platform.CITRA,
+        Platform.RPCS3,
+        Platform.YUZU,
+        Platform.PC,
     ],
 )
 def test_roundtrip_all_platforms(platform: Platform) -> None:
@@ -22,7 +32,11 @@ def test_roundtrip_all_platforms(platform: Platform) -> None:
     patch = Patch(
         address=0x1234,
         value=0xAB,
-        compare=0xCD if platform in (Platform.NES, Platform.GAMEBOY, Platform.GAMEGEAR) else 0,
+        compare=0xCD if platform in (
+            Platform.NES, Platform.GAMEBOY, Platform.GAMEGEAR, Platform.NDS,
+            Platform.N3DS, Platform.PSP, Platform.PSVITA, Platform.SWITCH,
+            Platform.DOLPHIN, Platform.CITRA, Platform.RPCS3, Platform.YUZU, Platform.PC
+        ) else 0,
         platform=platform,
     )
     code = encode(patch)
