@@ -1,0 +1,38 @@
+[platform]
+id = 14
+name = "Steam Deck / PC JSON-based saves"
+short_name = "PC"
+
+[address]
+bits = 32
+max = 0xFFFFFFFF
+
+[data]
+bits = 8
+
+[compare]
+supported = true
+
+[defaults]
+patch_type = "REPLACE"
+flags = { compare_enabled = false, wide_data = false, read_only = false, persistent = false }
+
+[fields.health]
+offset = 0x100
+type = "int"
+description = "Player health (integer)"
+
+[fields.invincible]
+offset = 0x104
+type = "bool"
+description = "Invincibility flag (boolean)"
+
+[fields.status_effects]
+offset = 0x108
+type = "bitfield"
+description = "Status effects (poison, sleep, etc.)"
+
+[fields.character_class]
+offset = 0x10C
+type = "enum"
+description = "Character class (0=Warrior, 1=Mage)"

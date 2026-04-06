@@ -1,0 +1,18 @@
+[platform]
+id = 4
+name = "Game Gear"
+short_name = "GAMEGEAR"
+
+[address]
+bits = 16
+max = 0xFFFF
+
+[data]
+bits = 8
+
+[compare]
+supported = true
+
+[defaults]
+patch_type = "REPLACE"
+flags = { compare_enabled = false, wide_data = false, read_only = false, persistent = false }
