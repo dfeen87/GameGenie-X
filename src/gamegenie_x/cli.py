@@ -682,7 +682,7 @@ def main() -> None:
                 print(f"0x{val:<8X} | {prof.short_name:<12} | {prof.name}")
 
             for prof in external_profiles:
-                print(f"{str(prof.platform):<10} | {prof.short_name:<12} | {prof.name}")
+                print(f"{prof.platform!s:<10} | {prof.short_name:<12} | {prof.name}")
 
         elif args.command == "patch":
             from gamegenie_x.patcher import apply_patch_to_file

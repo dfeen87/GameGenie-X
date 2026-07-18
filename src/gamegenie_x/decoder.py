@@ -37,7 +37,7 @@ def decode(code: str, *, verify: bool = True) -> Patch:
     # 2. Once validated, decode and unpack safely.
     stripped = alphabet.strip_code(code)
     packed = alphabet.decode_symbols(stripped)
-    patch, crc = bitpack.unpack_full(packed)
+    patch, _ = bitpack.unpack_full(packed)
 
     return patch
 
