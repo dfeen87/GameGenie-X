@@ -2,24 +2,24 @@
 
 import json
 from pathlib import Path
+
 import pytest
 
 from gamegenie_x import (
     GameProfile,
     InvalidProfileError,
+    Platform,
+    ProfileDetector,
+    SafetyRulesEngine,
+    UnsafePatchError,
     load_game_profile,
     load_game_profile_by_id,
-    ProfileDetector,
-    DetectionDiagnostic,
-    SafetyRulesEngine,
-    SafetyResult,
-    UnsafePatchError,
-    Patch as LegacyPatch,
-    Platform,
-    PatchType,
-    Flags,
 )
-from gamegenie_x.patch_v2 import Patch as ModernPatch, PatchSequence, TargetType
+from gamegenie_x import (
+    Patch as LegacyPatch,
+)
+from gamegenie_x.patch_v2 import Patch as ModernPatch
+from gamegenie_x.patch_v2 import PatchSequence, TargetType
 from gamegenie_x.profiles import load_profile
 
 
@@ -386,7 +386,9 @@ def test_safety_engine_forbidden_fields(temp_profiles_dir: Path) -> None:
         engine.validate_patch(patch_gold, profile, save_bytes, safe_mode=True)
 
     # Let's check anti_cheat block
-    patch_ac = ModernPatch(target_type=TargetType.SAVE, offset=0, key_path="anti_cheat", new_value=True)
+    patch_ac = ModernPatch(
+        target_type=TargetType.SAVE, offset=0, key_path="anti_cheat", new_value=True
+    )
     with pytest.raises(UnsafePatchError, match="Forbidden field access"):
         engine.validate_patch(patch_ac, profile, save_bytes, safe_mode=True)
 
@@ -395,7 +397,9 @@ def test_safety_engine_forbidden_fields(temp_profiles_dir: Path) -> None:
 # 4. Patch Engine Integration Tests
 # ==========================================
 
-def test_legacy_patch_application_with_safety_check(temp_profiles_dir: Path, tmp_path: Path) -> None:
+def test_legacy_patch_application_with_safety_check(
+    temp_profiles_dir: Path, tmp_path: Path
+) -> None:
     """Test applying legacy patch via apply_patch_to_file with safety integration."""
     game_profile = load_game_profile_by_id("rpg_hero", profiles_dir=temp_profiles_dir)
     platform_profile = load_profile(Platform.NES)  # Using NES as dummy platform profile
