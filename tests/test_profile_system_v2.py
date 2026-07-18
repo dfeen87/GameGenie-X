@@ -155,7 +155,7 @@ def test_load_profile_invalid_range(temp_profiles_dir: Path) -> None:
     with open(bad_file, "w", encoding="utf-8") as f:
         json.dump(bad_profile, f)
 
-    with pytest.raises(InvalidProfileError, match="min.*cannot be greater than max"):
+    with pytest.raises(InvalidProfileError, match=r"min.*cannot be greater than max"):
         load_game_profile(bad_file)
 
 
@@ -191,7 +191,7 @@ def test_load_profile_invalid_save_structure(temp_profiles_dir: Path) -> None:
     with open(bad_file, "w", encoding="utf-8") as f:
         json.dump(bad_profile, f)
 
-    with pytest.raises(InvalidProfileError, match="must be an integer.*or nested dictionary"):
+    with pytest.raises(InvalidProfileError, match=r"must be an integer.*or nested dictionary"):
         load_game_profile(bad_file)
 
 

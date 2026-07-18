@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 
 
 class Platform(enum.IntEnum):
-    """Supported platform identifiers (4-bit, 0–15)."""
+    """Supported platform identifiers (4-bit, 0-15)."""
     NES       = 0x0
     SNES      = 0x1
     GENESIS   = 0x2
@@ -27,14 +27,14 @@ class Platform(enum.IntEnum):
 
 
 class PatchType(enum.IntEnum):
-    """Patch operation type (4-bit, 0–15)."""
+    """Patch operation type (4-bit, 0-15)."""
     REPLACE   = 0x0  # Replace byte at address with value
     INCREMENT = 0x1  # Add value to byte at address
     DECREMENT = 0x2  # Subtract value from byte at address
     BITSET    = 0x3  # OR value into byte at address
     BITCLEAR  = 0x4  # AND ~value into byte at address
     XOR       = 0x5  # XOR value into byte at address
-    # 0x6–0xF reserved for future types
+    # 0x6-0xF reserved for future types
 
 
 @dataclass(frozen=True, slots=True)
@@ -71,9 +71,9 @@ class Flags:
 @dataclass(frozen=True, slots=True)
 class Patch:
     """A single GameGenie-X patch descriptor."""
-    address: int       # 0x00000000–0xFFFFFFFF (32-bit)
-    value: int         # 0x00–0xFF (8-bit)
-    compare: int = 0   # 0x00–0xFF (8-bit), 0 if unused
+    address: int       # 0x00000000-0xFFFFFFFF (32-bit)
+    value: int         # 0x00-0xFF (8-bit)
+    compare: int = 0   # 0x00-0xFF (8-bit), 0 if unused
     platform: Platform = Platform.NES
     patch_type: PatchType = PatchType.REPLACE
     flags: Flags = field(default_factory=Flags)

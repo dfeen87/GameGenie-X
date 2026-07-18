@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-# Canonical alphabet — index is the 5-bit value (0–31)
+# Canonical alphabet — index is the 5-bit value (0-31)
 ALPHABET: str = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"
 
 # Reverse lookup: character -> 5-bit integer

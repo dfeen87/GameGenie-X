@@ -5,8 +5,8 @@ from __future__ import annotations
 from gamegenie_x.models import Flags, Patch, PatchType, Platform
 
 TOTAL_BITS: int = 75
-PAYLOAD_BITS: int = 64  # bits 74–11 (everything except checksum)
-CHECKSUM_BITS: int = 11  # bits 10–0
+PAYLOAD_BITS: int = 64  # bits 74-11 (everything except checksum)
+CHECKSUM_BITS: int = 11  # bits 10-0
 
 # Field widths and shifts (MSB-first packing)
 FIELD_SPECS: dict[str, tuple[int, int]] = {
