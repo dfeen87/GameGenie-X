@@ -1,1 +1,2 @@
 pip install gamegenie-x
+tomli>=2.0
