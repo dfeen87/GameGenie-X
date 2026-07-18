@@ -1,14 +1,15 @@
 """Unit tests for the CLI v2 and Interactive Shell (Module C)."""
 
-import sys
 import json
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
+
 import pytest
 
-from gamegenie_x.cli import main, handle_decode, handle_preview, handle_apply, handle_sandbox, get_parser
+from gamegenie_x.cli import handle_apply, handle_decode, handle_preview, handle_sandbox
 from gamegenie_x.encoder import encode
-from gamegenie_x.models import Patch as LegacyPatch, Platform, Flags
+from gamegenie_x.models import Flags, Platform
+from gamegenie_x.models import Patch as LegacyPatch
 
 
 @pytest.fixture
@@ -58,7 +59,9 @@ def test_cli_decode_command(capsys: pytest.CaptureFixture[str]) -> None:
     assert "Value:            0xAB" in captured.out
 
 
-def test_cli_apply_command(dummy_binary_file: Path, dummy_profile_file: Path, capsys: pytest.CaptureFixture[str]) -> None:
+def test_cli_apply_command(
+    dummy_binary_file: Path, dummy_profile_file: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
     # Address 1 is HP. Set HP to 99.
     legacy = LegacyPatch(address=1, value=99, platform=Platform.UNIVERSAL)
     code = encode(legacy, validate=False)
@@ -74,18 +77,24 @@ def test_cli_apply_command(dummy_binary_file: Path, dummy_profile_file: Path, ca
     assert data[1] == 99
 
 
-def test_cli_apply_safety_violation(dummy_binary_file: Path, dummy_profile_file: Path, capsys: pytest.CaptureFixture[str]) -> None:
+def test_cli_apply_safety_violation(
+    dummy_binary_file: Path, dummy_profile_file: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
     # Address 4 is gold (marked gold_unsafe=True). Set gold to 50.
     legacy = LegacyPatch(address=4, value=50, platform=Platform.UNIVERSAL)
     code = encode(legacy, validate=False)
 
-    handle_apply(code, str(dummy_binary_file), profile_path=str(dummy_profile_file), safe_mode=True)
+    handle_apply(
+        code, str(dummy_binary_file), profile_path=str(dummy_profile_file), safe_mode=True
+    )
 
     captured = capsys.readouterr()
     assert "Forbidden field access" in captured.out or "Forbidden field access" in captured.err
 
 
-def test_cli_preview_command(dummy_binary_file: Path, dummy_profile_file: Path, capsys: pytest.CaptureFixture[str]) -> None:
+def test_cli_preview_command(
+    dummy_binary_file: Path, dummy_profile_file: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
     # Address 1 is HP. Set HP to 150. Compare with 0x20 (matches!).
     legacy = LegacyPatch(
         address=1,

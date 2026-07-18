@@ -1,12 +1,11 @@
 """Unit tests for the SandboxEmulator (Module C)."""
 
-import json
 import pytest
 
 from gamegenie_x.game_profiles import GameProfile
 from gamegenie_x.patch_v2 import Patch, PatchSequence, TargetType
-from gamegenie_x.sandbox import SandboxEmulator
 from gamegenie_x.safety import UnsafePatchError
+from gamegenie_x.sandbox import SandboxEmulator
 
 
 @pytest.fixture

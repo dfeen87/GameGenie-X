@@ -1,14 +1,14 @@
 """Unit tests for the PreviewEngine (Module C)."""
 
 import json
-from pathlib import Path
+
 import pytest
 
 from gamegenie_x.game_profiles import GameProfile
-from gamegenie_x.patch_v2 import Patch, PatchSequence, TargetType
-from gamegenie_x.preview import PreviewEngine, PreviewResult
-from gamegenie_x.profiles import PlatformProfile, FieldDef, IOStrategy
 from gamegenie_x.models import Flags, PatchType
+from gamegenie_x.patch_v2 import Patch, PatchSequence, TargetType
+from gamegenie_x.preview import PreviewEngine
+from gamegenie_x.profiles import FieldDef, PlatformProfile
 
 
 @pytest.fixture
@@ -113,7 +113,12 @@ def test_preview_json_basic(json_save_data: bytes) -> None:
     )
 
     p1 = Patch(target_type=TargetType.CONFIG, key_path="player.hp", new_value=250)
-    p2 = Patch(target_type=TargetType.CONFIG, key_path="player.gold", new_value=50, patch_type=PatchType.INCREMENT)
+    p2 = Patch(
+        target_type=TargetType.CONFIG,
+        key_path="player.gold",
+        new_value=50,
+        patch_type=PatchType.INCREMENT,
+    )
 
     seq = PatchSequence([p1, p2])
     engine = PreviewEngine()
