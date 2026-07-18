@@ -26,3 +26,6 @@ interrogate>=1.5
 # Web viewer (Module E)
 fastapi>=0.110
 uvicorn>=0.30
+
+tomli>=2.0
+
