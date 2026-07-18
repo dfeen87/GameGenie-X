@@ -1,0 +1,30 @@
+{
+  "game_id": "rpg_hero",
+  "display_name": "RPG Hero v2",
+  "save_structure": {
+    "player": {
+      "stats": {
+        "hp": 10,
+        "mp": 12,
+        "is_alive": 16
+      },
+      "level": 14
+    },
+    "gold": 20
+  },
+  "value_ranges": {
+    "player.stats.hp": [1, 999],
+    "player.stats.mp": [1, 99],
+    "player.level": [1, 99],
+    "gold": [0, 999999]
+  },
+  "flags": {
+    "player.stats.is_alive": true,
+    "anti_cheat": true,
+    "gold_unsafe": true
+  },
+  "signature": [82, 80, 71, 72],
+  "file_size_range": [100, 200],
+  "format": "binary",
+  "magic_number": "52504748"
+}
