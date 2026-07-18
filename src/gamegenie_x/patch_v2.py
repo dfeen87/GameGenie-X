@@ -13,6 +13,7 @@ from gamegenie_x.models import Patch as LegacyPatch
 from gamegenie_x.models import PatchType
 
 if TYPE_CHECKING:
+    from gamegenie_x.game_profiles import GameProfile
     from gamegenie_x.profiles import PlatformProfile
 
 
@@ -43,7 +44,13 @@ class PatchSequence:
 
     patches: list[Patch] = field(default_factory=list)
 
-    def apply(self, filepath: str | Path, profile: PlatformProfile) -> bool:
+    def apply(
+        self,
+        filepath: str | Path,
+        profile: PlatformProfile,
+        game_profile: GameProfile | None = None,
+        safe_mode: bool = True,
+    ) -> bool:
         """Applies the sequence of patches to the target file.
 
         Returns:
@@ -52,6 +59,15 @@ class PatchSequence:
         path = Path(filepath)
         if not path.exists():
             raise FileNotFoundError(f"Target file not found: {path}")
+
+        # Safety validation before any writes
+        if game_profile is not None:
+            with open(path, "rb") as f:
+                save_bytes = f.read()
+            from gamegenie_x.safety import SafetyRulesEngine
+            engine = SafetyRulesEngine()
+            for patch in self.patches:
+                engine.validate_patch(patch, game_profile, save_bytes, safe_mode=safe_mode)
 
         strategy = "binary"
         if profile.io_strategy:

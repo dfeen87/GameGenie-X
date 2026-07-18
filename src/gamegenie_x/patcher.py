@@ -9,10 +9,17 @@ from typing import TYPE_CHECKING
 from gamegenie_x.models import Patch, PatchType
 
 if TYPE_CHECKING:
+    from gamegenie_x.game_profiles import GameProfile
     from gamegenie_x.profiles import PlatformProfile
 
 
-def apply_patch_to_file(patch: Patch, filepath: str | Path, profile: PlatformProfile) -> bool:
+def apply_patch_to_file(
+    patch: Patch,
+    filepath: str | Path,
+    profile: PlatformProfile,
+    game_profile: GameProfile | None = None,
+    safe_mode: bool = True,
+) -> bool:
     """Applies a decoded GameGenie-X patch to a target file.
 
     Handles different IO strategies (binary, json, container) based on the profile.
@@ -23,6 +30,8 @@ def apply_patch_to_file(patch: Patch, filepath: str | Path, profile: PlatformPro
         patch: The decoded GameGenie-X code.
         filepath: Path to the target save file or metadata block.
         profile: The platform profile defining IO strategy and constraints.
+        game_profile: Optional GameProfile for safety rules enforcement.
+        safe_mode: If True, rejects unsafe patches and raises UnsafePatchError.
 
     Returns:
         bool indicating if the file was modified.
@@ -30,10 +39,18 @@ def apply_patch_to_file(patch: Patch, filepath: str | Path, profile: PlatformPro
     Raises:
         FileNotFoundError: If the file does not exist.
         ValueError: If the file format or strategy is unsupported or malformed.
+        UnsafePatchError: If safety validation fails and safe_mode is True.
     """
     path = Path(filepath)
     if not path.exists():
         raise FileNotFoundError(f"Target file not found: {path}")
+
+    # Safety rules check
+    if game_profile is not None:
+        with open(path, "rb") as f:
+            save_bytes = f.read()
+        from gamegenie_x.safety import SafetyRulesEngine
+        SafetyRulesEngine().validate_patch(patch, game_profile, save_bytes, safe_mode=safe_mode)
 
     strategy = "binary"
     if profile.io_strategy:
@@ -67,6 +84,7 @@ def _calculate_new_value(current_value: int, patch: Patch) -> int:
     else:
         raise ValueError(f"Unsupported patch type: {patch.patch_type}")
 
+
 def _apply_binary(patch: Patch, path: Path, profile: PlatformProfile) -> bool:
     """Applies patch to a raw binary file."""
     with open(path, "rb") as f:
@@ -97,6 +115,7 @@ def _apply_binary(patch: Patch, path: Path, profile: PlatformProfile) -> bool:
 
     return True
 
+
 def _apply_json(patch: Patch, path: Path, profile: PlatformProfile) -> bool:
     """Applies patch to a JSON file."""
     with open(path, encoding="utf-8") as f:
@@ -109,7 +128,7 @@ def _apply_json(patch: Patch, path: Path, profile: PlatformProfile) -> bool:
                 field_path = k
                 break
 
-    keys = field_path.split('.')
+    keys = field_path.split(".")
     target = data
     for key in keys[:-1]:
         if key not in target:
