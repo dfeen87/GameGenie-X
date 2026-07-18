@@ -37,16 +37,16 @@ jobs:
           pip install -e .
 
       - name: Lint with ruff
-        run: ruff check gamegenie_x/ tests/ fuzz/
+        run: ruff check src/gamegenie_x/ tests/ fuzz/
 
       - name: Type-check with mypy
-        run: mypy --strict gamegenie_x/
+        run: mypy --strict src/gamegenie_x/
 
       - name: Run security scan with bandit
-        run: bandit -r gamegenie_x/ -lll
+        run: bandit -r src/gamegenie_x/ -lll
 
       - name: Enforce docstring coverage with interrogate
-        run: interrogate gamegenie_x/
+        run: interrogate src/gamegenie_x/
 
       - name: Run tests with coverage
         run: pytest tests/ fuzz/ --cov=gamegenie_x --cov-report=xml:coverage.xml --cov-report=term-missing --junitxml=test-results.xml
