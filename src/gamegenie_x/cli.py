@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 import argparse
+import json
 import sys
-from typing import TYPE_CHECKING
+from pathlib import Path
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
+    from gamegenie_x.game_profiles import GameProfile
     from gamegenie_x.profiles import PlatformProfile
 
 from gamegenie_x import decoder, encoder, profiles
@@ -52,8 +55,9 @@ def get_parser() -> argparse.ArgumentParser:
     )
 
     # Decode subcommand
-    decode_parser = subparsers.add_parser("decode", help="Decode a code string into a Patch")
+    decode_parser = subparsers.add_parser("decode", help="Decode a GameGenie-X code")
     decode_parser.add_argument("code", type=str, help="The GameGenie-X code string")
+    decode_parser.add_argument("--platform", type=str, help="Override platform profile")
 
     # Validate subcommand
     validate_parser = subparsers.add_parser("validate", help="Validate a code string")
@@ -74,13 +78,43 @@ def get_parser() -> argparse.ArgumentParser:
     # List subcommand
     subparsers.add_parser("list", help="List all supported platform profiles")
 
-    # Patch subcommand
+    # Patch subcommand (legacy)
     patch_parser = subparsers.add_parser("patch", help="Apply a patch code to a file")
     patch_parser.add_argument("code", type=str, help="The GameGenie-X code string")
     patch_parser.add_argument("file", type=str, help="Path to the save file or config to patch")
     patch_parser.add_argument(
         "--platform", required=True, type=str, help="Platform name or external ID"
     )
+
+    # Apply subcommand (v2)
+    apply_parser = subparsers.add_parser(
+        "apply", help="Apply decoded patches to a real save file"
+    )
+    apply_parser.add_argument("code", type=str, help="The GameGenie-X code string")
+    apply_parser.add_argument("savefile", type=str, help="Path to the save file to patch")
+    apply_parser.add_argument("--platform", type=str, help="Platform override name")
+    apply_parser.add_argument("--profile", type=str, help="Path to JSON game profile")
+    apply_parser.add_argument(
+        "--no-safety", action="store_true", help="Disable safety rules engine"
+    )
+
+    # Preview subcommand (v2)
+    preview_parser = subparsers.add_parser("preview", help="Show what fields will change")
+    preview_parser.add_argument("code", type=str, help="The GameGenie-X code string")
+    preview_parser.add_argument("savefile", type=str, help="Path to the save file")
+    preview_parser.add_argument("--platform", type=str, help="Platform override name")
+    preview_parser.add_argument("--profile", type=str, help="Path to JSON game profile")
+
+    # Sandbox subcommand (v2)
+    sandbox_parser = subparsers.add_parser(
+        "sandbox", help="Apply patches to a virtual save in-memory"
+    )
+    sandbox_parser.add_argument("code", type=str, help="The GameGenie-X code string")
+    sandbox_parser.add_argument("--profile", type=str, help="Path to JSON game profile")
+    sandbox_parser.add_argument("--platform", type=str, help="Platform override name")
+
+    # Shell subcommand (REPL)
+    subparsers.add_parser("shell", help="Start the interactive shell REPL")
 
     return parser
 
@@ -99,6 +133,444 @@ def parse_patch_type(name: str) -> PatchType:
         return PatchType[name.upper()]
     except KeyError as e:
         raise ValueError(f"Unknown patch type: {name}") from e
+
+
+def load_profiles_for_patch(
+    patch_platform: Platform | str,
+    platform_override: str | None = None,
+    profile_path: str | None = None,
+    save_bytes: bytes | None = None,
+) -> tuple[PlatformProfile, GameProfile | None]:
+    """Resolves platform and game profiles based on context and defaults."""
+    plat = patch_platform
+    if platform_override:
+        plat = parse_platform(platform_override)
+
+    game_profile: GameProfile | None = None
+    if profile_path:
+        from gamegenie_x.game_profiles import load_game_profile
+        try:
+            game_profile = load_game_profile(profile_path)
+        except Exception as e:
+            msg = f"Warning: Failed to load specified profile {profile_path}: {e}"
+            print(msg, file=sys.stderr)
+    elif save_bytes is not None:
+        from gamegenie_x.detector import ProfileDetector
+        detector = ProfileDetector(profiles_dir="profiles")
+        game_profile = detector.detect(save_bytes)
+
+    if plat == Platform.UNIVERSAL and game_profile is not None:
+        # Maps internally to universal platform-compatible default
+        plat = "ps5"
+
+    if plat == Platform.UNIVERSAL:
+        plat = "ps5"
+
+    try:
+        platform_profile = profiles.load_profile(plat)
+    except Exception:
+        platform_profile = profiles.load_profile("ps5")
+
+    return platform_profile, game_profile
+
+
+def handle_decode(code_str: str, platform_override: str | None = None) -> None:
+    """Decodes code and displays comprehensive structured breakdown."""
+    from gamegenie_x.decoder import ChecksumError, decode
+    from gamegenie_x.patch_v2 import from_legacy_patch
+    from gamegenie_x.validator import PayloadValidator
+
+    try:
+        PayloadValidator.validate(code_str, verify=True)
+        checksum_valid = True
+    except ChecksumError:
+        checksum_valid = False
+    except Exception:
+        checksum_valid = False
+
+    try:
+        legacy_patch = decode(code_str, verify=False)
+    except Exception as e:
+        print(f"Decoding Error: {e}", file=sys.stderr)
+        return
+
+    platform_profile, _ = load_profiles_for_patch(
+        legacy_patch.platform, platform_override=platform_override
+    )
+
+    patch_seq = from_legacy_patch(legacy_patch, platform_profile)
+
+    print("=== Code Explanation Output ===")
+    print(f"Code String:        {code_str}")
+    print(f"Checksum Validity:  {'VALID' if checksum_valid else 'INVALID'}")
+    print("-" * 55)
+    print("Legacy Patch Details:")
+    print(f"  Address:          0x{legacy_patch.address:08X}")
+    print(f"  Value:            0x{legacy_patch.value:02X}")
+    print(f"  Compare:          0x{legacy_patch.compare:02X}")
+    print(f"  Platform:         {legacy_patch.platform.name}")
+    print(f"  Patch Type:       {legacy_patch.patch_type.name}")
+    flags_str = (
+        f"compare_enabled={legacy_patch.flags.compare_enabled}, "
+        f"wide_data={legacy_patch.flags.wide_data}, "
+        f"read_only={legacy_patch.flags.read_only}, "
+        f"persistent={legacy_patch.flags.persistent}"
+    )
+    print(f"  Flags:            {flags_str}")
+    print("-" * 55)
+    print(f"Modern Patch Sequence Details ({len(patch_seq.patches)} patches):")
+    for idx, p in enumerate(patch_seq.patches):
+        print(f"  Patch {idx + 1}:")
+        print(f"    Target Type:    {p.target_type.name}")
+        offset_str = f"0x{p.offset:08X}" if p.offset is not None else "None"
+        print(f"    Offset:         {offset_str}")
+        print(f"    Key Path:       {p.key_path or 'None'}")
+        print(f"    New Value:      {p.new_value}")
+        print(f"    Compare Value:  {p.compare_value}")
+        print(f"    Patch Type:     {p.patch_type.name}")
+
+
+def handle_apply(
+    code_str: str,
+    savefile: str,
+    platform_override: str | None = None,
+    profile_path: str | None = None,
+    safe_mode: bool = True,
+) -> None:
+    """Applies code to a real save file enforcing safety rules."""
+    from gamegenie_x.patch_v2 import from_legacy_patch
+
+    save_path = Path(savefile)
+    if not save_path.exists():
+        print(f"Error: Save file '{savefile}' not found.", file=sys.stderr)
+        return
+
+    try:
+        save_bytes = save_path.read_bytes()
+    except Exception as e:
+        print(f"Error reading save file: {e}", file=sys.stderr)
+        return
+
+    try:
+        legacy_patch = decoder.decode(code_str, verify=False)
+    except Exception as e:
+        print(f"Error decoding: {e}", file=sys.stderr)
+        return
+
+    platform_profile, game_profile = load_profiles_for_patch(
+        legacy_patch.platform,
+        platform_override=platform_override,
+        profile_path=profile_path,
+        save_bytes=save_bytes,
+    )
+
+    patch_seq = from_legacy_patch(legacy_patch, platform_profile)
+
+    try:
+        applied = patch_seq.apply(
+            save_path,
+            platform_profile,
+            game_profile=game_profile,
+            safe_mode=safe_mode,
+        )
+        if applied:
+            print(f"Successfully applied patches to {savefile}.")
+        else:
+            print("Patches evaluated but did not modify state (conditions mismatch/unchanged).")
+    except Exception as e:
+        print(f"Error: {e}", file=sys.stderr)
+
+
+def handle_preview(
+    code_str: str,
+    savefile: str,
+    platform_override: str | None = None,
+    profile_path: str | None = None,
+) -> None:
+    """Previews changes to save file without modifying it."""
+    from gamegenie_x.patch_v2 import from_legacy_patch
+    from gamegenie_x.preview import PreviewEngine
+
+    save_path = Path(savefile)
+    if not save_path.exists():
+        print(f"Error: Save file '{savefile}' not found.", file=sys.stderr)
+        return
+
+    try:
+        save_bytes = save_path.read_bytes()
+    except Exception as e:
+        print(f"Error reading save file: {e}", file=sys.stderr)
+        return
+
+    try:
+        legacy_patch = decoder.decode(code_str, verify=False)
+    except Exception as e:
+        print(f"Error decoding: {e}", file=sys.stderr)
+        return
+
+    platform_profile, game_profile = load_profiles_for_patch(
+        legacy_patch.platform,
+        platform_override=platform_override,
+        profile_path=profile_path,
+        save_bytes=save_bytes,
+    )
+
+    patch_seq = from_legacy_patch(legacy_patch, platform_profile)
+
+    engine = PreviewEngine()
+    results = engine.preview(patch_seq, save_bytes, game_profile or platform_profile)
+
+    print("=== Patch Preview Results ===")
+    if game_profile:
+        print(f"Game Profile:      {game_profile.display_name} ({game_profile.game_id})")
+    print(f"Platform Profile:  {platform_profile.name}")
+    print("-" * 90)
+    header_fields = (
+        f"{'Field Name':<25} | {'Path/Offset':<15} | {'Old':<6} | "
+        f"{'New':<6} | {'Compare':<8} | {'Safety':<6} | {'Applied'}"
+    )
+    print(header_fields)
+    print("-" * 90)
+    for r in results:
+        field_name = r.field_name or "N/A"
+        comp_match = (
+            "N/A"
+            if r.compare_matched is None
+            else ("YES" if r.compare_matched else "NO")
+        )
+        safety = "PASS" if r.safety_passed else f"FAIL ({', '.join(r.safety_errors)})"
+        applied = "YES" if r.applied else "NO"
+
+        is_old_int = isinstance(r.old_value, int) and not isinstance(r.old_value, bool)
+        is_new_int = isinstance(r.new_value, int) and not isinstance(r.new_value, bool)
+
+        old_val_str = f"0x{r.old_value:02X}" if is_old_int else str(r.old_value)
+        new_val_str = f"0x{r.new_value:02X}" if is_new_int else str(r.new_value)
+
+        row_fields = (
+            f"{field_name[:25]:<25} | {r.offset_or_key_path:<15} | "
+            f"{old_val_str:<6} | {new_val_str:<6} | {comp_match:<8} | "
+            f"{safety:<6} | {applied}"
+        )
+        print(row_fields)
+
+
+def handle_sandbox(
+    code_str: str,
+    profile_path: str | None = None,
+    platform_override: str | None = None,
+) -> None:
+    """Applies patches in-memory to virtual save and dumps state."""
+    from gamegenie_x.game_profiles import GameProfile, load_game_profile
+    from gamegenie_x.patch_v2 import from_legacy_patch
+    from gamegenie_x.sandbox import SandboxEmulator
+
+    game_profile = None
+    if profile_path:
+        try:
+            game_profile = load_game_profile(profile_path)
+        except Exception as e:
+            print(f"Error loading profile {profile_path}: {e}", file=sys.stderr)
+            return
+    else:
+        # Search profiles/ for JSON profiles
+        profiles_dir = Path("profiles")
+        json_files = list(profiles_dir.glob("*.json"))
+        if json_files:
+            try:
+                game_profile = load_game_profile(json_files[0])
+                print(f"Using auto-selected profile: {game_profile.display_name}")
+            except Exception:
+                pass
+
+        if game_profile is None:
+            # Create a mock default RPG profile
+            game_profile = GameProfile(
+                game_id="default_sandbox_rpg",
+                display_name="Default Sandbox RPG",
+                save_structure={
+                    "player": {
+                        "stats": {
+                            "hp": 10,
+                            "mp": 12,
+                        },
+                        "level": 14,
+                    },
+                    "gold": 20,
+                },
+                value_ranges={
+                    "player.stats.hp": (1, 999),
+                    "player.stats.mp": (1, 99),
+                    "player.level": (1, 99),
+                    "gold": (0, 999999),
+                },
+                flags={},
+                signature=b"SAND",
+                format="binary",
+            )
+            msg = f"No profiles found. Initialized '{game_profile.display_name}' fallback."
+            print(msg)
+
+    try:
+        legacy_patch = decoder.decode(code_str, verify=False)
+    except Exception as e:
+        print(f"Error decoding: {e}", file=sys.stderr)
+        return
+
+    platform_profile, _ = load_profiles_for_patch(
+        legacy_patch.platform, platform_override=platform_override, profile_path=profile_path
+    )
+
+    patch_seq = from_legacy_patch(legacy_patch, platform_profile)
+
+    emu = SandboxEmulator()
+    emu.load_virtual_save(game_profile)
+
+    print("Initial Virtual State:")
+    _print_state(emu.dump_state(), game_profile.format or "binary")
+
+    try:
+        modified = emu.apply_patch_sequence(patch_seq, safe_mode=True)
+        print("-" * 55)
+        if modified:
+            print("Successfully applied patches to the virtual save.")
+        else:
+            print("Patches evaluated but virtual save was not modified.")
+    except Exception as e:
+        print(f"Error in Sandbox: {e}", file=sys.stderr)
+        return
+
+    print("-" * 55)
+    print("Resulting Virtual State:")
+    _print_state(emu.dump_state(), game_profile.format or "binary")
+
+
+def _print_state(state: Any, fmt: str) -> None:
+    if fmt == "json":
+        print(json.dumps(state, indent=2))
+    else:
+        if isinstance(state, (bytes, bytearray)):
+            print(state.hex())
+
+
+def run_shell() -> None:
+    """REPL interactive shell loop."""
+    import shlex
+    print("=== GameGenie-X Interactive Shell v2 ===")
+    print("Commands: decode, apply, preview, sandbox, exit")
+    print("Type 'help' or '?' for syntax details.")
+
+    while True:
+        try:
+            line = input("gamegeniex> ").strip()
+        except (KeyboardInterrupt, EOFError):
+            print()
+            break
+
+        if not line:
+            continue
+        if line.lower() == "exit":
+            break
+
+        try:
+            parts = shlex.split(line)
+        except ValueError as e:
+            print(f"Error parsing command: {e}", file=sys.stderr)
+            continue
+
+        cmd = parts[0].lower()
+        args = parts[1:]
+
+        if cmd in ("help", "?"):
+            print("Interactive Commands Syntax:")
+            print("  decode <code> [--platform <p>]")
+            print("  apply <code> <savefile> [--platform <p>] [--profile <prof>] [--no-safety]")
+            print("  preview <code> <savefile> [--platform <p>] [--profile <prof>]")
+            print("  sandbox <code> [--profile <prof>] [--platform <p>]")
+            print("  exit")
+            continue
+
+        if cmd == "decode":
+            if not args:
+                print("Usage: decode <code> [--platform <p>]", file=sys.stderr)
+                continue
+            code_str = args[0]
+            override = None
+            if "--platform" in args:
+                idx = args.index("--platform")
+                if idx + 1 < len(args):
+                    override = args[idx + 1]
+            handle_decode(code_str, platform_override=override)
+
+        elif cmd == "apply":
+            if len(args) < 2:
+                msg = (
+                    "Usage: apply <code> <savefile> [--platform <p>] "
+                    "[--profile <prof>] [--no-safety]"
+                )
+                print(msg, file=sys.stderr)
+                continue
+            code_str = args[0]
+            savefile = args[1]
+            override = None
+            prof = None
+            safe_mode = True
+            if "--platform" in args:
+                idx = args.index("--platform")
+                if idx + 1 < len(args):
+                    override = args[idx + 1]
+            if "--profile" in args:
+                idx = args.index("--profile")
+                if idx + 1 < len(args):
+                    prof = args[idx + 1]
+            if "--no-safety" in args:
+                safe_mode = False
+            handle_apply(
+                code_str,
+                savefile,
+                platform_override=override,
+                profile_path=prof,
+                safe_mode=safe_mode,
+            )
+
+        elif cmd == "preview":
+            if len(args) < 2:
+                msg = "Usage: preview <code> <savefile> [--platform <p>] [--profile <prof>]"
+                print(msg, file=sys.stderr)
+                continue
+            code_str = args[0]
+            savefile = args[1]
+            override = None
+            prof = None
+            if "--platform" in args:
+                idx = args.index("--platform")
+                if idx + 1 < len(args):
+                    override = args[idx + 1]
+            if "--profile" in args:
+                idx = args.index("--profile")
+                if idx + 1 < len(args):
+                    prof = args[idx + 1]
+            handle_preview(code_str, savefile, platform_override=override, profile_path=prof)
+
+        elif cmd == "sandbox":
+            if not args:
+                print("Usage: sandbox <code> [--profile <prof>] [--platform <p>]", file=sys.stderr)
+                continue
+            code_str = args[0]
+            prof = None
+            override = None
+            if "--profile" in args:
+                idx = args.index("--profile")
+                if idx + 1 < len(args):
+                    prof = args[idx + 1]
+            if "--platform" in args:
+                idx = args.index("--platform")
+                if idx + 1 < len(args):
+                    override = args[idx + 1]
+            handle_sandbox(code_str, profile_path=prof, platform_override=override)
+
+        else:
+            print(f"Unknown command: '{cmd}'. Type 'help' for details.", file=sys.stderr)
 
 
 def main() -> None:
@@ -132,29 +604,7 @@ def main() -> None:
             print(code)
 
         elif args.command == "decode":
-            try:
-                patch = decoder.decode(args.code)
-            except decoder.ChecksumError as e:
-                print(f"Checksum Error: {e}", file=sys.stderr)
-                sys.exit(2)
-            except ValueError as e:
-                print(f"Error: {e}", file=sys.stderr)
-                sys.exit(1)
-
-            print(f"{'Field':<15} | {'Value'}")
-            print("-" * 35)
-            print(f"{'Address':<15} | 0x{patch.address:04X}")
-            print(f"{'Value':<15} | 0x{patch.value:02X}")
-            print(f"{'Compare':<15} | 0x{patch.compare:02X}")
-            print(f"{'Platform':<15} | {patch.platform.name}")
-            print(f"{'Patch Type':<15} | {patch.patch_type.name}")
-            flags_str = (
-                f"compare_enabled={patch.flags.compare_enabled}, "
-                f"wide_data={patch.flags.wide_data}, "
-                f"read_only={patch.flags.read_only}, "
-                f"persistent={patch.flags.persistent}"
-            )
-            print(f"{'Flags':<15} | {flags_str}")
+            handle_decode(args.code, platform_override=args.platform)
 
         elif args.command == "validate":
             try:
@@ -218,21 +668,16 @@ def main() -> None:
             # Separate internal and external profiles
             internal_profiles: list[PlatformProfile] = []
             external_profiles: list[PlatformProfile] = []
-            # Ignore the type assignment issue for k being bound in loop scope
-            # where it can be Platform | str
             for k, p in all_profiles.items():  # type: ignore[assignment]
                 if isinstance(k, Platform):
                     internal_profiles.append(p)
                 else:
-                    # external profile has str key
                     external_profiles.append(p)
 
-            # Sort by Platform ID for consistent output
             internal_profiles.sort(key=lambda p: getattr(p.platform, "value", 0))
             external_profiles.sort(key=lambda p: str(p.platform))
 
             for prof in internal_profiles:
-                # Type guard, we know it's a Platform here
                 val = getattr(prof.platform, "value", 0)
                 print(f"0x{val:<8X} | {prof.short_name:<12} | {prof.name}")
 
@@ -271,9 +716,37 @@ def main() -> None:
                 print(f"Failed to apply patch: {e}", file=sys.stderr)
                 sys.exit(1)
 
+        elif args.command == "apply":
+            handle_apply(
+                args.code,
+                args.savefile,
+                platform_override=args.platform,
+                profile_path=args.profile,
+                safe_mode=not args.no_safety,
+            )
+
+        elif args.command == "preview":
+            handle_preview(
+                args.code,
+                args.savefile,
+                platform_override=args.platform,
+                profile_path=args.profile,
+            )
+
+        elif args.command == "sandbox":
+            handle_sandbox(
+                args.code,
+                profile_path=args.profile,
+                platform_override=args.platform,
+            )
+
+        elif args.command == "shell":
+            run_shell()
+
     except Exception as e:
         print(f"Error: {e}", file=sys.stderr)
         sys.exit(1)
+
 
 if __name__ == "__main__":
     main()
