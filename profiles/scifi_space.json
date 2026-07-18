@@ -1,0 +1,21 @@
+{
+  "game_id": "scifi_space",
+  "display_name": "Sci-Fi Space Adventure",
+  "save_structure": {
+    "energy": 5,
+    "ship": {
+      "shield": 25,
+      "is_active": 30
+    }
+  },
+  "value_ranges": {
+    "energy": [0, 100],
+    "ship.shield": [0, 500]
+  },
+  "flags": {
+    "ship.is_active": true
+  },
+  "signature": [123, 34, 115, 99],
+  "file_size_range": [10, 500],
+  "format": "json"
+}

@@ -113,6 +113,41 @@ def get_parser() -> argparse.ArgumentParser:
     sandbox_parser.add_argument("--profile", type=str, help="Path to JSON game profile")
     sandbox_parser.add_argument("--platform", type=str, help="Platform override name")
 
+    # Generate subcommand (Module E1)
+    generate_parser = subparsers.add_parser(
+        "generate", help="Generate code for field/value inputs"
+    )
+    generate_parser.add_argument(
+        "field", nargs="?", type=str, help="Dot-separated field path (e.g. player.stats.hp)"
+    )
+    generate_parser.add_argument(
+        "value", nargs="?", type=int, help="Replacement integer value"
+    )
+    generate_parser.add_argument(
+        "profile", nargs="?", type=str, help="Path or game_id of JSON game profile"
+    )
+    generate_parser.add_argument(
+        "--interactive", "-i", action="store_true", help="Enter interactive generation mode"
+    )
+
+    # Library subcommand (Module E2)
+    library_parser = subparsers.add_parser("library", help="Browse pre-made curated patches")
+    lib_sub = library_parser.add_subparsers(dest="lib_command", required=True)
+
+    lib_sub.add_parser("list", help="List all games in the library")
+    show_parser = lib_sub.add_parser("show", help="Show all patches for a specific game")
+    show_parser.add_argument("game", type=str, help="The game ID string")
+
+    apply_lib_parser = lib_sub.add_parser("apply", help="Apply a library patch to a savefile")
+    apply_lib_parser.add_argument("game", type=str, help="The game ID string")
+    apply_lib_parser.add_argument(
+        "patch", type=str, help="The patch name (or case-insensitive exact name)"
+    )
+    apply_lib_parser.add_argument("savefile", type=str, help="Path to the save file to patch")
+    apply_lib_parser.add_argument(
+        "--no-safety", action="store_true", help="Disable safety rules validation"
+    )
+
     # Shell subcommand (REPL)
     subparsers.add_parser("shell", help="Start the interactive shell REPL")
 
@@ -573,6 +608,132 @@ def run_shell() -> None:
             print(f"Unknown command: '{cmd}'. Type 'help' for details.", file=sys.stderr)
 
 
+def handle_generate(
+    field: str | None,
+    value: int | None,
+    profile_str: str | None,
+    interactive: bool = False,
+) -> None:
+    """Handles the generate code subcommand."""
+    from gamegenie_x.game_profiles import load_game_profile, load_game_profile_by_id
+    from gamegenie_x.generator import CodeGenerator
+
+    generator = CodeGenerator()
+
+    if interactive:
+        # Prompt for profile
+        profiles_dir = Path("profiles")
+        json_files = [f.stem for f in profiles_dir.glob("*.json") if f.stem != "example_game"]
+        print("Available Game Profiles:")
+        for idx, f in enumerate(json_files):
+            print(f"  {idx + 1}. {f}")
+        try:
+            p_idx = int(input("Select Profile number: ").strip()) - 1
+            game_id = json_files[p_idx]
+            profile = load_game_profile_by_id(game_id, profiles_dir)
+        except Exception:
+            print("Invalid profile selected. Exiting.", file=sys.stderr)
+            return
+
+        # Prompt for field name
+        print(f"\nProfile structure for '{profile.display_name}':")
+        print(json.dumps(profile.save_structure, indent=2))
+        field_input = input("Enter field name path: ").strip()
+
+        # Prompt for value
+        try:
+            val_input = int(input("Enter replacement value (integer): ").strip(), 0)
+        except Exception:
+            print("Invalid value. Exiting.", file=sys.stderr)
+            return
+
+        field = field_input
+        value = val_input
+    else:
+        if not field or value is None or not profile_str:
+            print("Error: Missing generate arguments. Try --interactive mode.", file=sys.stderr)
+            return
+
+        # Attempt loading profile
+        try:
+            p_path = Path("profiles") / f"{profile_str}.json"
+            if p_path.exists():
+                profile = load_game_profile_by_id(profile_str, profiles_dir="profiles")
+            else:
+                profile = load_game_profile(profile_str)
+        except Exception as e:
+            print(f"Error loading profile '{profile_str}': {e}", file=sys.stderr)
+            return
+
+    try:
+        code = generator.generate_code(field, value, profile)
+        print("\n=== Generated GameGenie-X Code ===")
+        print(f"Field:       {field}")
+        print(f"Value:       {value} (0x{value:02X})")
+        print(f"Game:        {profile.display_name}")
+        print(f"Generated Code: {code}")
+    except Exception as e:
+        print(f"Error: {e}", file=sys.stderr)
+
+
+def handle_library(args: argparse.Namespace) -> None:
+    """Handles the curated patch library subcommand."""
+    from gamegenie_x.library import PatchLibrary
+
+    lib = PatchLibrary(profiles_dir="profiles")
+
+    if args.lib_command == "list":
+        games = lib.list_games()
+        print("=== Supported Game Libraries ===")
+        for game in games:
+            print(f"- {game}")
+
+    elif args.lib_command == "show":
+        try:
+            categories = lib.list_categories(args.game)
+            print(f"=== Patches for '{args.game}' ===")
+            for cat in categories:
+                print(f"\n[{cat}]")
+                patches = lib.get_patches(args.game, cat)
+                for p in patches:
+                    print(f"  - {p.name}:")
+                    print(f"      Code:        {p.code}")
+                    print(f"      Description: {p.description}")
+        except KeyError as e:
+            print(f"Error: {e}", file=sys.stderr)
+
+    elif args.lib_command == "apply":
+        try:
+            categories = lib.list_categories(args.game)
+            target_patch = None
+            for cat in categories:
+                for p in lib.get_patches(args.game, cat):
+                    if p.name.lower() == args.patch.lower():
+                        target_patch = p
+                        break
+                if target_patch:
+                    break
+
+            if not target_patch:
+                print(
+                    f"Error: Patch '{args.patch}' not found for game '{args.game}'.",
+                    file=sys.stderr,
+                )
+                return
+
+            print(f"Found patch '{target_patch.name}': {target_patch.description}")
+            print(f"Applying patch code '{target_patch.code}' to '{args.savefile}'...")
+            handle_apply(
+                target_patch.code,
+                args.savefile,
+                platform_override="ps5",
+                profile_path=f"profiles/{args.game}.json",
+                safe_mode=not args.no_safety,
+            )
+        except KeyError as e:
+            print(f"Error: {e}", file=sys.stderr)
+
+
 def main() -> None:
     """Entry point for the command-line interface."""
     parser = get_parser()
@@ -739,6 +900,12 @@ def main() -> None:
                 profile_path=args.profile,
                 platform_override=args.platform,
             )
+
+        elif args.command == "generate":
+            handle_generate(args.field, args.value, args.profile, interactive=args.interactive)
+
+        elif args.command == "library":
+            handle_library(args)
 
         elif args.command == "shell":
             run_shell()

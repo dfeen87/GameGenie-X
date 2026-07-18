@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GameGenie-X Web Hub</title>
+    <style>
+        body {
+            background-color: #0d0d15;
+            color: #00ff66;
+            font-family: 'Courier New', Courier, monospace;
+            margin: 0;
+            padding: 20px;
+        }
+        h1, h2, h3 {
+            color: #ff0055;
+            text-transform: uppercase;
+            text-shadow: 0 0 10px #ff0055;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            border: 2px solid #00ff66;
+            padding: 20px;
+            box-shadow: 0 0 15px rgba(0, 255, 102, 0.3);
+            background-color: #12121e;
+        }
+        .section {
+            border-bottom: 1px dashed #ff0055;
+            padding-bottom: 20px;
+            margin-bottom: 20px;
+        }
+        .section:last-child {
+            border-bottom: none;
+        }
+        button, input, select {
+            background-color: #0d0d15;
+            color: #00ff66;
+            border: 1px solid #00ff66;
+            padding: 8px 12px;
+            font-family: inherit;
+            margin-right: 10px;
+        }
+        button:hover {
+            background-color: #00ff66;
+            color: #0d0d15;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        pre {
+            background-color: #08080f;
+            border: 1px solid #ff0055;
+            padding: 15px;
+            overflow-x: auto;
+            color: #00ffcc;
+        }
+        .flex {
+            display: flex;
+            gap: 20px;
+        }
+        .flex-child {
+            flex: 1;
+        }
+        .success {
+            color: #00ff66;
+        }
+        .error {
+            color: #ff3333;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>GameGenie-X Web Hub v2.0</h1>
+            <p>Welcome, Cyber-Hacker. Decoder, Patch Library, and Sharing system are fully online.</p>
+        </header>
+
+        <main>
+            <!-- 1. DECODER SECTION -->
+            <section class="section">
+                <h2>1. Code Decoder</h2>
+                <p>Enter a 15-character GameGenie-X code to unpack its payload details:</p>
+                <div>
+                    <input type="text" id="code-input" placeholder="XXXXX-XXXXX-XXXXX" style="width: 300px;">
+                    <button id="decode-btn">DECODE CODE</button>
+                    <button id="share-btn">SHARE CODE</button>
+                </div>
+                <div id="share-link-box" style="margin-top: 10px;"></div>
+                <div id="decode-result"></div>
+            </section>
+
+            <!-- 2. PREVIEW SECTION -->
+            <section class="section">
+                <h2>2. Patch Preview Simulation</h2>
+                <p>Simulate and preview what modification this code will perform against a selected game save file profile:</p>
+                <div class="flex">
+                    <div class="flex-child">
+                        <label for="profile-select">Game Profile:</label><br>
+                        <select id="profile-select" style="width: 100%; margin-top: 5px;">
+                            <option value="rpg_hero">RPG Hero v2 (Binary)</option>
+                            <option value="scifi_space">Sci-Fi Space Adventure (JSON)</option>
+                        </select>
+                    </div>
+                    <div class="flex-child">
+                        <label for="preview-code-input">Code to Preview:</label><br>
+                        <input type="text" id="preview-code-input" placeholder="XXXXX-XXXXX-XXXXX" style="width: calc(100% - 20px); margin-top: 5px;">
+                    </div>
+                </div>
+                <div style="margin-top: 15px;">
+                    <button id="preview-btn">RUN SIMULATION PREVIEW</button>
+                </div>
+                <div id="preview-result"></div>
+            </section>
+
+            <!-- 3. PATCH LIBRARY BROWSER -->
+            <section class="section">
+                <h2>3. Curated Patch Library</h2>
+                <p>Select a game to browse pre-made vintage cheats and patches:</p>
+                <div>
+                    <button class="lib-game-btn" data-game="rpg_hero">RPG Hero v2</button>
+                    <button class="lib-game-btn" data-game="scifi_space">Sci-Fi Space Adventure</button>
+                </div>
+                <div id="library-result" style="margin-top: 15px;"></div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        // DOM Elements
+        const codeInput = document.getElementById('code-input');
+        const decodeBtn = document.getElementById('decode-btn');
+        const shareBtn = document.getElementById('share-btn');
+        const shareLinkBox = document.getElementById('share-link-box');
+        const decodeResult = document.getElementById('decode-result');
+
+        const profileSelect = document.getElementById('profile-select');
+        const previewCodeInput = document.getElementById('preview-code-input');
+        const previewBtn = document.getElementById('preview-btn');
+        const previewResult = document.getElementById('preview-result');
+
+        const libResult = document.getElementById('library-result');
+
+        // Helper to show results
+        function formatJSON(data) {
+            return `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+        }
+
+        // Action: Decode
+        decodeBtn.addEventListener('click', async () => {
+            const code = codeInput.value.trim();
+            if (!code) return;
+            decodeResult.innerHTML = '<p>Decoding...</p>';
+            try {
+                const response = await fetch(`/decode?code=${encodeURIComponent(code)}`);
+                const data = await response.json();
+                if (response.ok) {
+                    decodeResult.innerHTML = '<h3>Decoded Patch Info:</h3>' + formatJSON(data);
+                    previewCodeInput.value = code; // pre-fill preview code
+                } else {
+                    decodeResult.innerHTML = `<p class="error">Error: ${data.detail || 'Failed to decode'}</p>`;
+                }
+            } catch (err) {
+                decodeResult.innerHTML = `<p class="error">Network Error: ${err.message}</p>`;
+            }
+        });
+
+        // Action: Share
+        shareBtn.addEventListener('click', async () => {
+            const code = codeInput.value.trim();
+            if (!code) return;
+            try {
+                const response = await fetch('/share', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ code: code, metadata: { note: "Shared from Web Hub UI" } })
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    shareLinkBox.innerHTML = `<p class="success">Shareable Link Created: <a href="${data.url}" target="_blank" style="color: #00ffcc;">${window.location.origin}${data.url}</a></p>`;
+                } else {
+                    shareLinkBox.innerHTML = `<p class="error">Share Error: ${data.detail || 'Failed to share'}</p>`;
+                }
+            } catch (err) {
+                shareLinkBox.innerHTML = `<p class="error">Network Error: ${err.message}</p>`;
+            }
+        });
+
+        // Action: Preview
+        previewBtn.addEventListener('click', async () => {
+            const code = previewCodeInput.value.trim();
+            const profile = profileSelect.value;
+            if (!code) return;
+            previewResult.innerHTML = '<p>Simulating and analyzing safety limits...</p>';
+            try {
+                const response = await fetch(`/preview?code=${encodeURIComponent(code)}&profile=${encodeURIComponent(profile)}`);
+                const data = await response.json();
+                if (response.ok) {
+                    let html = '<h3>Simulation Preview Results:</h3>';
+                    data.results.forEach(res => {
+                        html += `<div style="border: 1px solid #ff0055; padding: 10px; margin-bottom: 10px; background-color: #0a0a0f;">`;
+                        html += `<p><strong>Field Path/Offset:</strong> ${res.field_name || 'Unknown'} (${res.offset_or_key_path})</p>`;
+                        html += `<p><strong>Old Value:</strong> ${res.old_value !== null ? res.old_value : 'N/A'} &rarr; <strong>New Value:</strong> ${res.new_value}</p>`;
+                        html += `<p><strong>Safety Evaluation:</strong> <span class="${res.safety_passed ? 'success' : 'error'}">${res.safety_passed ? 'PASSED (SAFE)' : 'FAILED (UNSAFE)'}</span></p>`;
+                        if (res.safety_errors && res.safety_errors.length > 0) {
+                            html += `<p class="error"><strong>Violations:</strong> ${res.safety_errors.join(', ')}</p>`;
+                        }
+                        html += `<p><strong>Applied in Sandbox:</strong> ${res.applied ? 'YES' : 'NO'}</p>`;
+                        html += `</div>`;
+                    });
+                    previewResult.innerHTML = html;
+                } else {
+                    previewResult.innerHTML = `<p class="error">Simulation Failed: ${data.detail || 'Unknown error'}</p>`;
+                }
+            } catch (err) {
+                previewResult.innerHTML = `<p class="error">Network Error: ${err.message}</p>`;
+            }
+        });
+
+        // Action: Browse Library
+        document.querySelectorAll('.lib-game-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const game = btn.getAttribute('data-game');
+                libResult.innerHTML = `<p>Loading library patches for ${game}...</p>`;
+                try {
+                    const response = await fetch(`/library/${game}`);
+                    const data = await response.json();
+                    if (response.ok) {
+                        let html = `<h3>Patches for ${game}:</h3>`;
+                        for (const cat in data.categories) {
+                            html += `<h4 style="color: #00ffcc; text-decoration: underline;">Category: ${cat}</h4>`;
+                            data.categories[cat].forEach(patch => {
+                                html += `<div style="border: 1px dashed #00ff66; padding: 10px; margin-bottom: 10px; background-color: #08080f;">`;
+                                html += `<p><strong>Name:</strong> ${patch.name}</p>`;
+                                html += `<p><strong>Description:</strong> ${patch.description}</p>`;
+                                html += `<p><strong>Code:</strong> <code style="color: #ff0055; font-size: 1.1rem; text-shadow: 0 0 5px #ff0055;">${patch.code}</code></p>`;
+                                html += `<button onclick="document.getElementById('code-input').value = '${patch.code}'; document.getElementById('preview-code-input').value = '${patch.code}'; window.scrollTo({top: 0, behavior: 'smooth'});">LOAD INTO DECODER</button>`;
+                                html += `</div>`;
+                            });
+                        }
+                        libResult.innerHTML = html;
+                    } else {
+                        libResult.innerHTML = `<p class="error">Failed to load library: ${data.detail || 'Unknown error'}</p>`;
+                    }
+                } catch (err) {
+                    libResult.innerHTML = `<p class="error">Network Error: ${err.message}</p>`;
+                }
+            });
+        });
+
+        // Auto check for share ID in URL path
+        window.addEventListener('load', async () => {
+            const pathParts = window.location.pathname.split('/');
+            const shareIndex = pathParts.indexOf('share');
+            if (shareIndex !== -1 && shareIndex + 1 < pathParts.length) {
+                const hash = pathParts[shareIndex + 1];
+                if (hash) {
+                    decodeResult.innerHTML = '<p>Loading Shared Code...</p>';
+                    try {
+                        const response = await fetch(`/share/${hash}`);
+                        const data = await response.json();
+                        if (response.ok) {
+                            codeInput.value = data.code;
+                            decodeResult.innerHTML = `<p class="success">Loaded shared code successfully!</p>` + formatJSON(data);
+                            // Auto trigger decode
+                            decodeBtn.click();
+                        } else {
+                            decodeResult.innerHTML = `<p class="error">Share link failed: ${data.detail}</p>`;
+                        }
+                    } catch (err) {
+                        decodeResult.innerHTML = `<p class="error">Network Error: ${err.message}</p>`;
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>
